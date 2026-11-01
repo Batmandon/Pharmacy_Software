@@ -212,8 +212,56 @@
       <td class="num" data-f="stock"></td>
       <td><span class="status" data-f="status"></span></td>
       <td class="actions">
+        <button type="button" class="btn btn-ghost btn-sm" data-action="toggle-batches" aria-expanded="false">
+          <span data-f="batch-label">Batches</span> <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+        </button>
         <button type="button" class="icon-btn" data-action="edit" aria-label="Edit product"><i class="fa-solid fa-pen" aria-hidden="true"></i></button>
         <button type="button" class="icon-btn danger" data-action="delete" aria-label="Delete product"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+      </td>
+    </tr>
+  </template>
+
+  <template id="batch-panel">
+    <tr class="batch-panel">
+      <td colspan="5">
+        <div class="batch-box">
+          <div class="batch-box-head">
+            <strong>Batches</strong>
+            <button type="button" class="btn btn-outline btn-sm" data-action="add-batch">
+              <i class="fa-solid fa-plus" aria-hidden="true"></i> Add batch
+            </button>
+          </div>
+          <div class="table-wrap">
+            <table class="table table-inner">
+              <thead>
+                <tr>
+                  <th scope="col">Batch no</th>
+                  <th scope="col">Expiry</th>
+                  <th scope="col" class="num">Qty</th>
+                  <th scope="col" class="num">MRP</th>
+                  <th scope="col" class="num">Discount</th>
+                  <th scope="col"><span class="sr-only">Actions</span></th>
+                </tr>
+              </thead>
+              <tbody data-f="batch-body"></tbody>
+            </table>
+          </div>
+          <p class="empty" data-f="batch-empty" hidden>No batches yet. Add one to put this product in stock.</p>
+        </div>
+      </td>
+    </tr>
+  </template>
+
+  <template id="batch-row">
+    <tr>
+      <td data-f="batch_no"></td>
+      <td data-f="expiry"></td>
+      <td class="num" data-f="quantity"></td>
+      <td class="num" data-f="mrp"></td>
+      <td class="num" data-f="discount"></td>
+      <td class="actions">
+        <button type="button" class="icon-btn" data-action="edit-batch" aria-label="Edit batch"><i class="fa-solid fa-pen" aria-hidden="true"></i></button>
+        <button type="button" class="icon-btn danger" data-action="delete-batch" aria-label="Delete batch"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
       </td>
     </tr>
   </template>
@@ -294,14 +342,8 @@
         </div>
       </fieldset>
 
-      <fieldset data-group="batch">
+      <fieldset data-group="batch" id="batch-fieldset">
         <legend id="batch-legend">First batch</legend>
-
-        <!-- Edit mode only: choose which batch to edit -->
-        <div class="field" id="batch-picker-wrap" hidden>
-          <label for="batch-select">Batch to edit</label>
-          <select id="batch-select" class="input"></select>
-        </div>
 
         <div class="grid-2">
           <div class="field"><label for="b-no">Batch number</label>
@@ -341,6 +383,53 @@
     </form>
   </dialog>
 
+  <!-- ===== Batch dialog (add a batch to a product / edit one batch) ===== -->
+  <dialog id="batch-dialog" class="dialog" aria-labelledby="batch-dialog-title">
+    <form id="batch-form" class="dialog-body" novalidate>
+      <div class="dialog-head">
+        <h3 id="batch-dialog-title">Add batch</h3>
+        <button type="button" class="icon-btn" data-close aria-label="Close"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+      </div>
+
+      <div id="batch-message" class="form-message" role="alert"></div>
+
+      <div class="grid-2">
+        <div class="field"><label for="bd-no">Batch number</label>
+          <input type="text" id="bd-no" name="batch_no" class="input" maxlength="100" autofocus><small class="error"></small></div>
+        <div class="field"><label for="bd-qty">Quantity</label>
+          <input type="number" id="bd-qty" name="quantity" class="input" min="0" step="1"><small class="error"></small></div>
+      </div>
+
+      <div class="grid-2">
+        <div class="field"><label for="bd-mfg">Mfg date <span class="opt">(optional)</span></label>
+          <input type="date" id="bd-mfg" name="mfg_date" class="input"><small class="error"></small></div>
+        <div class="field"><label for="bd-exp">Expiry date</label>
+          <input type="date" id="bd-exp" name="expiry_date" class="input"><small class="error"></small></div>
+      </div>
+
+      <div class="grid-3">
+        <div class="field"><label for="bd-purchase">Purchase price</label>
+          <input type="number" id="bd-purchase" name="purchase_price" class="input" min="0" step="0.01"><small class="error"></small></div>
+        <div class="field"><label for="bd-mrp">MRP</label>
+          <input type="number" id="bd-mrp" name="mrp" class="input" min="0" step="0.01"><small class="error"></small></div>
+        <div class="field"><label for="bd-discount">Discount %</label>
+          <input type="number" id="bd-discount" name="discount_percent" class="input" min="0" max="100" step="0.01" value="0"><small class="error"></small></div>
+      </div>
+
+      <div class="grid-2">
+        <div class="field"><label for="bd-supplier">Supplier ID <span class="opt">(optional)</span></label>
+          <input type="number" id="bd-supplier" name="supplier_id" class="input" min="1" step="1"><small class="error"></small></div>
+        <div class="field"><label for="bd-rack">Rack location <span class="opt">(optional)</span></label>
+          <input type="text" id="bd-rack" name="rack_location" class="input" maxlength="100"><small class="error"></small></div>
+      </div>
+
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-ghost" data-close>Cancel</button>
+        <button type="submit" class="btn btn-primary" id="batch-save">Save batch</button>
+      </div>
+    </form>
+  </dialog>
+
   <!-- ===== Confirm dialog (delete, logout) ===== -->
   <dialog id="confirm-dialog" class="dialog dialog-small" aria-labelledby="confirm-title">
     <form method="dialog" class="dialog-body">
@@ -355,7 +444,7 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="config.js"></script>
-  <script src="js/dashboard.js"></script>
+  <script src="js/config.js" defer></script>
+  <script src="js/dashboard.js" defer></script>
 </body>
 </html>

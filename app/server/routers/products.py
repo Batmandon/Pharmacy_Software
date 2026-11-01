@@ -161,7 +161,13 @@ def edit_batch(batch_id: int, batch: EditBatch, admin=Depends(require_admin), co
 
 @router.delete("/batches/{batch_id}")
 def delete_batch(batch_id: int, admin=Depends(require_admin), conn=Depends(get_db)):
-    result = BatchRepository(conn).delete_batch(batch_id)
+    try:
+        result = BatchRepository(conn).delete_batch(batch_id)
+    except psycopg.errors.ForeignKeyViolation:
+        raise HTTPException(
+            status_code=409,
+            detail="This batch was sold in an order and cannot be deleted. Set its quantity to 0 instead.",
+        )
     if "error" in result:
         raise HTTPException(
             status_code=result["status_code"],

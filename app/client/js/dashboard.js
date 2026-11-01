@@ -13,6 +13,8 @@ const PATHS = {
   logout: "/auth_routes/logout",     // POST
   dashboard: "/admin/dashboard",     // GET   today_orders, pending_orders, revenue, active_products, total_products
   products: "/admin/products",       // GET   ?search=&page=&page_size=
+  productsWrite: "/products",        // POST {product, batch}  |  PUT /{id} {product}  |  DELETE /{id}
+  batches: "/batches",               // POST  |  PATCH /{id}  |  DELETE /{id}
   orders: "/admin/orders",           // GET   ?status=&page=&page_size=   |   PATCH /{id}/status
 };
 
@@ -319,6 +321,15 @@ $("order-body").addEventListener("change", async (e) => {
 // ===================== PRODUCTS =====================
 const productState = { page: 1, search: "", seq: 0 };
 const productPager = { prev: $("page-prev"), next: $("page-next"), info: $("page-info") };
+const productCache = new Map(); // product id -> product from the list (it carries its batches)
+const expanded = new Set();     // ids of the products whose batches are open
+
+// "YYYY-MM-DD" for today in India, and days between today and a date
+const todayStr = () => new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+const daysLeft = (dateStr) =>
+  Math.round((new Date(`${dateStr}T00:00:00Z`) - new Date(`${todayStr()}T00:00:00Z`)) / 86400000);
+const dateOnlyFmt = new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+const formatDateOnly = (s) => (s ? dateOnlyFmt.format(new Date(`${s}T00:00:00Z`)) : "");
 
 function productRow(p) {
   const { row, cell } = cloneRow("product-row");
@@ -329,6 +340,39 @@ function productRow(p) {
   cell("category").textContent = p.category || "";
   cell("stock").textContent = count.format(toNumber(p.total_stock));
   setStatus(cell("status"), p.is_active ? "active" : "inactive");
+
+  const batchCount = Array.isArray(p.batches) ? p.batches.length : 0;
+  cell("batch-label").textContent = `Batches (${batchCount})`;
+  row.querySelector('[data-action="toggle-batches"]').setAttribute("aria-expanded", String(expanded.has(p.id)));
+  return row;
+}
+
+function batchRow(b) {
+  const { row, cell } = cloneRow("batch-row");
+  row.dataset.batchId = b.id;
+
+  cell("batch_no").textContent = b.batch_no;
+  cell("expiry").textContent = formatDateOnly(b.expiry_date);
+  const left = daysLeft(b.expiry_date);
+  if (left <= 90) {
+    const tag = document.createElement("span");
+    tag.className = `tag ${left < 0 ? "tag-expired" : "tag-soon"}`;
+    tag.textContent = left < 0 ? "Expired" : `${left}d left`;
+    cell("expiry").append(tag);
+  }
+  cell("quantity").textContent = count.format(toNumber(b.quantity));
+  cell("mrp").textContent = b.mrp == null ? "–" : money.format(toNumber(b.mrp));
+  cell("discount").textContent = `${toNumber(b.discount_percent)}%`;
+  return row;
+}
+
+// the extra row under a product that lists its batches
+function batchPanel(p) {
+  const { row, cell } = cloneRow("batch-panel");
+  const batches = Array.isArray(p.batches) ? p.batches : [];
+  row.dataset.productId = p.id;
+  cell("batch-body").replaceChildren(...batches.map(batchRow));
+  cell("batch-empty").hidden = batches.length > 0;
   return row;
 }
 
@@ -345,7 +389,11 @@ async function loadProducts() {
     if (seq !== productState.seq) return;
 
     const items = toItems(data);
-    body.replaceChildren(...items.map(productRow));
+    productCache.clear();
+    items.forEach((p) => productCache.set(p.id, p));
+
+    // products whose batches were open stay open after a reload
+    body.replaceChildren(...items.flatMap((p) => (expanded.has(p.id) ? [productRow(p), batchPanel(p)] : [productRow(p)])));
     $("product-empty").hidden = items.length > 0;
     updatePager(productPager, productState.page, CONFIG.PAGE_SIZE, toNumber(data.total));
   } catch (err) {
@@ -366,11 +414,375 @@ $("product-search").addEventListener("input", (e) => {
 $("page-prev").addEventListener("click", () => { productState.page -= 1; loadProducts(); });
 $("page-next").addEventListener("click", () => { productState.page += 1; loadProducts(); });
 
-// Add / edit / delete come in the next step (they need the product dialog + the write endpoints)
-const NEXT_STEP = "Adding and editing products is the next step.";
-$("add-product-btn").addEventListener("click", () => showToast(NEXT_STEP));
+// ---------- form helpers (shared by the product and batch dialogs) ----------
+const PRODUCT_FIELDS = [
+  "name", "category", "manufacturer", "strength", "form", "pack_size",
+  "schedule", "gst_percent", "hsn_code", "storage_condition", "description", "image_url",
+];
+const BATCH_FIELDS = [
+  "batch_no", "quantity", "mfg_date", "expiry_date", "purchase_price",
+  "mrp", "discount_percent", "supplier_id", "rack_location",
+];
+const MONEY = /^\d{1,8}(\.\d{1,2})?$/;       // up to 8 digits, 2 decimals (the database column allows that)
+const PERCENT = /^\d{1,3}(\.\d{1,2})?$/;
+
+const readValues = (form, names) => Object.fromEntries(names.map((n) => [n, form.elements[n].value.trim()]));
+
+function setFieldError(input, msg) {
+  const field = input.closest(".field");
+  if (!field) return;
+  const holder = field.querySelector(".error");
+  if (holder) holder.textContent = msg;
+  field.classList.toggle("invalid", Boolean(msg));
+}
+function clearErrors(form) {
+  form.querySelectorAll(".field").forEach((f) => {
+    f.classList.remove("invalid");
+    const holder = f.querySelector(".error");
+    if (holder) holder.textContent = "";
+  });
+  form.querySelectorAll(".salt-row .invalid").forEach((i) => i.classList.remove("invalid"));
+}
+function applyErrors(form, errors) {
+  for (const [name, msg] of Object.entries(errors)) setFieldError(form.elements[name], msg);
+}
+function dialogMessage(box, text) {
+  box.textContent = text;
+  box.className = text ? "form-message error" : "form-message";
+}
+
+// same rules as the backend models (the backend checks again)
+function tooLong(errors, values, name, max, label) {
+  if (values[name].length > max) errors[name] = `${label} can be at most ${max} characters.`;
+}
+
+function validateProduct(v) {
+  const e = {};
+  if (!v.name) e.name = "Name is required."; else tooLong(e, v, "name", 20, "Name");
+  if (!v.category) e.category = "Category is required."; else tooLong(e, v, "category", 30, "Category");
+  if (!v.manufacturer) e.manufacturer = "Manufacturer is required."; else tooLong(e, v, "manufacturer", 100, "Manufacturer");
+  tooLong(e, v, "strength", 20, "Strength");
+  if (!v.form) e.form = "Select a form.";
+  tooLong(e, v, "pack_size", 20, "Pack size");
+  if (!v.schedule) e.schedule = "Select a schedule.";
+  if (v.gst_percent === "") e.gst_percent = "GST % is required.";
+  else if (!(Number(v.gst_percent) >= 0 && Number(v.gst_percent) <= 99.99)) e.gst_percent = "Enter a value from 0 to 99.99.";
+  tooLong(e, v, "hsn_code", 20, "HSN code");
+  tooLong(e, v, "storage_condition", 100, "Storage condition");
+  tooLong(e, v, "description", 500, "Description");
+  tooLong(e, v, "image_url", 200, "Image URL");
+  return e;
+}
+
+function validateBatch(v) {
+  const e = {};
+  if (!v.batch_no) e.batch_no = "Batch number is required."; else tooLong(e, v, "batch_no", 100, "Batch number");
+  if (!/^\d+$/.test(v.quantity)) e.quantity = "Enter a whole number, 0 or more.";
+  if (!v.expiry_date) e.expiry_date = "Expiry date is required.";
+  else if (v.mfg_date && v.mfg_date >= v.expiry_date) e.expiry_date = "Expiry must be after the manufacturing date.";
+  if (v.purchase_price && !MONEY.test(v.purchase_price)) e.purchase_price = "Enter an amount like 25 or 25.50.";
+  if (v.mrp && !MONEY.test(v.mrp)) e.mrp = "Enter an amount like 30 or 30.50.";
+  if (!e.purchase_price && !e.mrp && v.purchase_price && v.mrp && Number(v.purchase_price) > Number(v.mrp)) {
+    e.purchase_price = "Purchase price cannot be more than MRP.";
+  }
+  if (v.discount_percent && (!PERCENT.test(v.discount_percent) || Number(v.discount_percent) > 100)) {
+    e.discount_percent = "Enter a value from 0 to 100.";
+  }
+  if (v.supplier_id && !/^[1-9]\d*$/.test(v.supplier_id)) e.supplier_id = "Enter a valid supplier ID.";
+  tooLong(e, v, "rack_location", 100, "Rack location");
+  return e;
+}
+
+// the batch part of the request body (empty optional fields become null)
+function batchPayload(v) {
+  return {
+    batch_no: v.batch_no,
+    quantity: Number(v.quantity),
+    mfg_date: v.mfg_date || null,
+    expiry_date: v.expiry_date,
+    purchase_price: v.purchase_price || null,
+    mrp: v.mrp || null,
+    discount_percent: v.discount_percent || "0",
+    supplier_id: v.supplier_id ? Number(v.supplier_id) : null,
+    rack_location: v.rack_location || null,
+  };
+}
+
+// ---------- product dialog (add + edit) ----------
+const productDialog = $("product-dialog");
+const productForm = $("product-form");
+const productMsg = $("product-message");
+const saltList = $("salt-list");
+let productDialogState = { mode: "add", id: null, original: null };
+
+function addSaltRow(salt = { name: "", strength: "" }) {
+  const { row, cell } = cloneRow("salt-row");
+  cell("salt-name").value = salt.name ?? "";
+  cell("salt-strength").value = salt.strength ?? "";
+  saltList.append(row);
+}
+
+// reads the salt rows. Empty rows are skipped; returns the salts and one error message (or "")
+function readSalts() {
+  let error = "";
+  const salts = [];
+  const seen = new Set();
+  saltList.querySelectorAll(".salt-row").forEach((row) => {
+    const nameInput = row.querySelector('[data-f="salt-name"]');
+    const strengthInput = row.querySelector('[data-f="salt-strength"]');
+    const name = nameInput.value.trim();
+    const strength = strengthInput.value.trim();
+    if (!name && !strength) return;
+
+    if (!name) { error ||= "Every salt needs a name."; nameInput.classList.add("invalid"); return; }
+    if (strength.length > 20) { error ||= "Salt strength can be at most 20 characters."; strengthInput.classList.add("invalid"); }
+    if (seen.has(name.toLowerCase())) { error ||= "The same salt is added more than once."; nameInput.classList.add("invalid"); }
+    seen.add(name.toLowerCase());
+    salts.push({ name, strength });
+  });
+  if (!salts.length && !error) error = "Add at least one salt.";
+  return { salts, error };
+}
+
+function openProductDialog(mode, product = null) {
+  productDialogState = { mode, id: product ? product.id : null, original: product };
+  $("product-dialog-title").textContent = mode === "add" ? "Add product" : `Edit ${product.name}`;
+  $("product-save").textContent = mode === "add" ? "Save product" : "Save changes";
+
+  productForm.reset();
+  clearErrors(productForm);
+  dialogMessage(productMsg, "");
+  saltList.replaceChildren();
+
+  if (product) {
+    PRODUCT_FIELDS.forEach((n) => { productForm.elements[n].value = product[n] ?? ""; });
+    (product.salts || []).forEach(addSaltRow);
+  }
+  if (!saltList.children.length) addSaltRow();
+
+  // a new product is saved together with its first batch; editing a product does not touch batches
+  $("batch-fieldset").hidden = mode === "edit";
+  productDialog.showModal();
+}
+
+$("add-product-btn").addEventListener("click", () => openProductDialog("add"));
+$("add-salt-btn").addEventListener("click", () => addSaltRow());
+saltList.addEventListener("click", (e) => {
+  if (!e.target.closest('[data-action="remove-salt"]')) return;
+  e.target.closest(".salt-row").remove();
+  if (!saltList.children.length) addSaltRow(); // always keep one row to type in
+});
+
+productForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const { mode, id, original } = productDialogState;
+  clearErrors(productForm);
+  dialogMessage(productMsg, "");
+
+  const values = readValues(productForm, PRODUCT_FIELDS);
+  const { salts, error: saltError } = readSalts();
+  const batchValues = mode === "add" ? readValues(productForm, BATCH_FIELDS) : null;
+
+  const errors = { ...validateProduct(values), ...(batchValues ? validateBatch(batchValues) : {}) };
+  applyErrors(productForm, errors);
+  $("salts-error").textContent = saltError;
+  if (Object.keys(errors).length || saltError) {
+    dialogMessage(productMsg, "Please fix the highlighted fields.");
+    return;
+  }
+
+  const product = { ...values, gst_percent: Number(values.gst_percent), salts };
+  const btn = $("product-save");
+  const label = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Saving...";
+
+  try {
+    if (mode === "add") {
+      await request("POST", PATHS.productsWrite, { body: { product, batch: batchPayload(batchValues) } });
+      showToast("Product added");
+    } else {
+      // send only what changed
+      const changes = {};
+      PRODUCT_FIELDS.forEach((n) => {
+        const before = n === "gst_percent" ? Number(original[n]) : (original[n] ?? "");
+        if (product[n] !== before) changes[n] = product[n];
+      });
+      const savedSalts = (original.salts || []).map((s) => ({ name: s.name, strength: s.strength ?? "" }));
+      if (JSON.stringify(salts) !== JSON.stringify(savedSalts)) changes.salts = salts;
+
+      if (!Object.keys(changes).length) {
+        productDialog.close();
+        showToast("No changes to save");
+        return;
+      }
+      await request("PUT", `${PATHS.productsWrite}/${id}`, { body: { product: changes } });
+      showToast("Product updated");
+    }
+    productDialog.close();
+    await Promise.allSettled([loadProducts(), loadStats()]);
+  } catch (err) {
+    if (!err.redirecting) dialogMessage(productMsg, err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = label;
+  }
+});
+
+async function editProduct(id) {
+  try {
+    // the list does not carry salts or HSN / GST / description, so ask for the full product
+    openProductDialog("edit", await request("GET", `${PATHS.products}/${id}`));
+  } catch (err) {
+    if (!err.redirecting) showToast(err.message);
+  }
+}
+
+async function deleteProduct(id) {
+  const p = productCache.get(id);
+  const ok = await confirmAction({
+    title: `Delete ${p ? p.name : "this product"}?`,
+    text: "This cannot be undone. A product that has batches or order history cannot be deleted.",
+    confirmLabel: "Delete",
+  });
+  if (!ok) return;
+
+  try {
+    await request("DELETE", `${PATHS.productsWrite}/${id}`);
+    expanded.delete(id);
+    showToast("Product deleted");
+    await Promise.allSettled([loadProducts(), loadStats()]);
+  } catch (err) {
+    if (!err.redirecting) showToast(err.message);
+  }
+}
+
+// ---------- batch dialog (add a batch to a product / edit one batch) ----------
+const batchDialog = $("batch-dialog");
+const batchForm = $("batch-form");
+const batchMsg = $("batch-message");
+let batchDialogState = { mode: "add", productId: null, batch: null };
+
+const batchToValues = (b) =>
+  Object.fromEntries(BATCH_FIELDS.map((n) => [n, b[n] == null ? "" : String(b[n])]));
+
+function openBatchDialog(mode, productId, batch = null) {
+  batchDialogState = { mode, productId, batch };
+  const product = productCache.get(productId);
+  $("batch-dialog-title").textContent =
+    mode === "add" ? `Add batch${product ? ` · ${product.name}` : ""}` : `Edit batch ${batch.batch_no}`;
+  $("batch-save").textContent = mode === "add" ? "Save batch" : "Save changes";
+
+  batchForm.reset();
+  clearErrors(batchForm);
+  dialogMessage(batchMsg, "");
+  if (batch) {
+    const values = batchToValues(batch);
+    BATCH_FIELDS.forEach((n) => { batchForm.elements[n].value = values[n]; });
+  }
+  batchDialog.showModal();
+}
+
+batchForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const { mode, productId, batch } = batchDialogState;
+  clearErrors(batchForm);
+  dialogMessage(batchMsg, "");
+
+  const values = readValues(batchForm, BATCH_FIELDS);
+  const errors = validateBatch(values);
+  applyErrors(batchForm, errors);
+  if (Object.keys(errors).length) {
+    dialogMessage(batchMsg, "Please fix the highlighted fields.");
+    return;
+  }
+
+  const payload = batchPayload(values);
+  const btn = $("batch-save");
+  const label = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Saving...";
+
+  try {
+    if (mode === "add") {
+      await request("POST", PATHS.batches, { body: { product_id: productId, ...payload } });
+      showToast("Batch added");
+    } else {
+      // send only what changed (money fields are compared as numbers: "30" equals "30.00")
+      const before = batchPayload(batchToValues(batch));
+      const same = (k) => {
+        const money = ["purchase_price", "mrp", "discount_percent"].includes(k);
+        const norm = (v) => (money && v != null ? Number(v) : v);
+        return norm(payload[k]) === norm(before[k]);
+      };
+      const changes = Object.fromEntries(Object.keys(payload).filter((k) => !same(k)).map((k) => [k, payload[k]]));
+
+      if (!Object.keys(changes).length) {
+        batchDialog.close();
+        showToast("No changes to save");
+        return;
+      }
+      await request("PATCH", `${PATHS.batches}/${batch.id}`, { body: changes });
+      showToast("Batch updated");
+    }
+    batchDialog.close();
+    expanded.add(productId); // keep this product's batches open after the reload
+    await Promise.allSettled([loadProducts(), loadStats()]);
+  } catch (err) {
+    if (!err.redirecting) dialogMessage(batchMsg, err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = label;
+  }
+});
+
+async function deleteBatch(productId, batchId) {
+  const batch = (productCache.get(productId)?.batches || []).find((b) => b.id === batchId);
+  const ok = await confirmAction({
+    title: `Delete batch ${batch ? batch.batch_no : ""}?`,
+    text: "Its stock is removed from the shop. A batch that was already sold in an order cannot be deleted; set its quantity to 0 instead.",
+    confirmLabel: "Delete",
+  });
+  if (!ok) return;
+
+  try {
+    await request("DELETE", `${PATHS.batches}/${batchId}`);
+    showToast("Batch deleted");
+    await Promise.allSettled([loadProducts(), loadStats()]);
+  } catch (err) {
+    if (!err.redirecting) showToast(err.message);
+  }
+}
+
+// ---------- clicks in the products table (one listener for every button) ----------
 $("product-body").addEventListener("click", (e) => {
-  if (e.target.closest("[data-action]")) showToast(NEXT_STEP);
+  const btn = e.target.closest("[data-action]");
+  if (!btn) return;
+  const action = btn.dataset.action;
+
+  // buttons inside the batches list of a product
+  const panel = btn.closest(".batch-panel");
+  if (panel) {
+    const productId = Number(panel.dataset.productId);
+    const batchId = Number(btn.closest("tr").dataset.batchId);
+    if (action === "add-batch") openBatchDialog("add", productId);
+    else if (action === "edit-batch") {
+      const batch = (productCache.get(productId)?.batches || []).find((b) => b.id === batchId);
+      if (batch) openBatchDialog("edit", productId, batch);
+    } else if (action === "delete-batch") deleteBatch(productId, batchId);
+    return;
+  }
+
+  // buttons on a product row
+  const row = btn.closest("tr");
+  const id = Number(row.dataset.id);
+  if (action === "toggle-batches") {
+    const open = !expanded.has(id);
+    if (open) { expanded.add(id); row.after(batchPanel(productCache.get(id))); }
+    else { expanded.delete(id); row.nextElementSibling?.classList.contains("batch-panel") && row.nextElementSibling.remove(); }
+    btn.setAttribute("aria-expanded", String(open));
+  } else if (action === "edit") editProduct(id);
+  else if (action === "delete") deleteProduct(id);
 });
 
 // ===================== DIALOG CLOSING =====================
