@@ -90,6 +90,12 @@ def init_db():
         CONSTRAINT products_signature_key UNIQUE (signature)
     );
 
+    -- "Fever" and "fever" must not be two categories (same for the other name lists)
+    CREATE UNIQUE INDEX IF NOT EXISTS categories_lower_name_key ON categories (lower(name));
+    CREATE UNIQUE INDEX IF NOT EXISTS brands_lower_name_key ON brands (lower(name));
+    CREATE UNIQUE INDEX IF NOT EXISTS manufacturers_lower_name_key ON manufacturers (lower(name));
+    CREATE UNIQUE INDEX IF NOT EXISTS salts_lower_name_key ON salts (lower(name));
+
     CREATE TABLE IF NOT EXISTS product_details (
         id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
         product_id BIGINT NOT NULL UNIQUE REFERENCES products(id) ON DELETE CASCADE,
