@@ -17,6 +17,10 @@ const PATHS = {
   products: "/admin/products",       // GET   ?search=&page=&page_size=
   productsWrite: "/products",        // POST {product, batch}  |  PUT /{id} {product}  |  DELETE /{id}
   batches: "/batches",               // POST  |  PATCH /{id}  |  DELETE /{id}
+  categories: "/categories",           // GET (list)  |  POST {name}
+  manufacturers: "/manufacturers",     // GET (list)  |  POST {name}
+  salts: "/salts",                     // GET (list)  |  POST {name}
+  saltStrengths: "/admin/products/salt-strengths", // GET  strengths already used with each salt (suggestions)
   orders: "/admin/orders",           // GET   ?status=&page=&page_size=   |   GET /{id}   |   PATCH /{id}/status
   stockAlerts: "/batches/stock-alerts", // GET  a plain list of products running low
   expiring: "/admin/expiry/expiring",   // GET  ?days=&page=&page_size=
@@ -622,7 +626,7 @@ $("page-next").addEventListener("click", () => { productState.page += 1; loadPro
 
 // ---------- form helpers (shared by the product and batch dialogs) ----------
 const PRODUCT_FIELDS = [
-  "name", "category", "manufacturer", "form", "pack_size",
+  "name", "category_id", "manufacturer_id", "form", "pack_size",
   "schedule", "gst_percent", "hsn_code", "storage_condition", "description", "image_url",
 ];
 const BATCH_FIELDS = [
@@ -665,8 +669,8 @@ function tooLong(errors, values, name, max, label) {
 function validateProduct(v) {
   const e = {};
   if (!v.name) e.name = "Name is required."; else tooLong(e, v, "name", 20, "Name");
-  if (!v.category) e.category = "Category is required."; else tooLong(e, v, "category", 30, "Category");
-  if (!v.manufacturer) e.manufacturer = "Manufacturer is required."; else tooLong(e, v, "manufacturer", 100, "Manufacturer");
+  if (!v.category_id) e.category_id = "Select a category.";
+  if (!v.manufacturer_id) e.manufacturer_id = "Select a manufacturer.";
   if (!v.form) e.form = "Select a form.";
   tooLong(e, v, "pack_size", 20, "Pack size");
   if (!v.schedule) e.schedule = "Select a schedule.";
@@ -720,11 +724,58 @@ const productMsg = $("product-message");
 const saltList = $("salt-list");
 let productDialogState = { mode: "add", id: null, original: null };
 
+// ---------- lists behind the dropdowns (categories, manufacturers, salts, strengths already used) ----------
+const lookups = { categories: [], manufacturers: [], salts: [], strengths: new Map() };
+const LOOKUP_LABELS = { categories: "category", manufacturers: "manufacturer", salts: "salt" };
+const byName = (a, b) => String(a.name).localeCompare(String(b.name), "en", { sensitivity: "base" });
+
+// loaded every time the dialog opens, so a salt added by someone else (or in the catalog) shows up
+async function loadLookups() {
+  const [cats, mans, salts, strengths] = await Promise.allSettled([
+    request("GET", PATHS.categories, { allowArray: true }),
+    request("GET", PATHS.manufacturers, { allowArray: true }),
+    request("GET", PATHS.salts, { allowArray: true }),
+    request("GET", PATHS.saltStrengths),
+  ]);
+  for (const r of [cats, mans, salts]) if (r.status === "rejected") throw r.reason;
+  const list = (r) => (Array.isArray(r.value) ? r.value.filter((i) => i && i.id && i.name) : []).sort(byName);
+  lookups.categories = list(cats);
+  lookups.manufacturers = list(mans);
+  lookups.salts = list(salts);
+  // suggestions are a nice-to-have: if they fail the strength box still works
+  lookups.strengths = new Map(
+    strengths.status === "fulfilled" ? toItems(strengths.value).map((i) => [i.salt_id, i.strengths || []]) : []
+  );
+}
+
+function optionWithValue(value) {
+  const o = document.createElement("option");
+  o.value = value;
+  return o;
+}
+function fillSelect(select, items, label) {
+  select.replaceChildren(new Option(`Select ${label}`, ""), ...items.map((i) => new Option(i.name, String(i.id))));
+}
+const fillSaltOptions = () => $("salt-options").replaceChildren(...lookups.salts.map((s) => optionWithValue(s.name)));
+const saltByName = (name) => lookups.salts.find((s) => s.name.toLowerCase() === name.trim().toLowerCase());
+
+// the strength box of a salt row suggests the strengths already used with that salt
+function updateStrengthOptions(row) {
+  const salt = saltByName(row.querySelector('[data-f="salt-name"]').value);
+  const used = (salt && lookups.strengths.get(salt.id)) || [];
+  row.querySelector('[data-f="strength-options"]').replaceChildren(...used.map(optionWithValue));
+}
+
+let saltRowSeq = 0;
 function addSaltRow(salt = { name: "", strength: "" }) {
   const { row, cell } = cloneRow("salt-row");
   cell("salt-name").value = salt.name ?? "";
   cell("salt-strength").value = salt.strength ?? "";
+  const listId = `strengths-${++saltRowSeq}`; // every row has its own suggestion list
+  cell("strength-options").id = listId;
+  cell("salt-strength").setAttribute("list", listId);
   saltList.append(row);
+  updateStrengthOptions(row);
 }
 
 // reads the salt rows. Empty rows are skipped; returns the salts and one error message (or "")
@@ -740,16 +791,105 @@ function readSalts() {
     if (!name && !strength) return;
 
     if (!name) { error ||= "Every salt needs a name."; nameInput.classList.add("invalid"); return; }
+    const salt = saltByName(name);
+    if (!salt) {
+      error ||= `"${name}" is not in the salt list. Pick one from the list, or add it with the + button.`;
+      nameInput.classList.add("invalid");
+      return;
+    }
     if (strength.length > 20) { error ||= "Salt strength can be at most 20 characters."; strengthInput.classList.add("invalid"); }
-    if (seen.has(name.toLowerCase())) { error ||= "The same salt is added more than once."; nameInput.classList.add("invalid"); }
-    seen.add(name.toLowerCase());
-    salts.push({ name, strength });
+    if (seen.has(salt.id)) { error ||= "The same salt is added more than once."; nameInput.classList.add("invalid"); }
+    seen.add(salt.id);
+    salts.push({ salt_id: salt.id, strength });
   });
   if (!salts.length && !error) error = "Add at least one salt.";
   return { salts, error };
 }
 
-function openProductDialog(mode, product = null) {
+// ---------- small dialog: add a new category / manufacturer / salt ----------
+const catalogDialog = $("catalog-dialog");
+const catalogForm = $("catalog-form");
+const catalogName = $("catalog-name");
+const catalogMsg = $("catalog-message");
+let catalogKind = "categories";
+let catalogResult = null;
+
+// opens the dialog and gives back the created item ({id, name}), or null if it was closed without saving
+function askNewItem(kind, prefill = "") {
+  catalogKind = kind;
+  catalogResult = null;
+  $("catalog-title").textContent = `New ${LOOKUP_LABELS[kind]}`;
+  catalogName.value = prefill;
+  clearErrors(catalogForm);
+  dialogMessage(catalogMsg, "");
+  catalogDialog.showModal();
+  catalogName.focus();
+  return new Promise((resolve) => {
+    catalogDialog.addEventListener("close", () => resolve(catalogResult), { once: true });
+  });
+}
+
+catalogForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const name = catalogName.value.trim();
+  clearErrors(catalogForm);
+  dialogMessage(catalogMsg, "");
+  if (!name) { setFieldError(catalogName, "Enter a name."); return; }
+  if (name.length > 100) { setFieldError(catalogName, "Name can be at most 100 characters."); return; }
+
+  const btn = $("catalog-save");
+  btn.disabled = true;
+  try {
+    const created = await request("POST", PATHS[catalogKind], { body: { name } });
+    lookups[catalogKind] = [...lookups[catalogKind], created].sort(byName);
+    catalogResult = created;
+    catalogDialog.close();
+  } catch (err) {
+    if (err.redirecting) return;
+    dialogMessage(catalogMsg, /already exists/i.test(err.message)
+      ? `This ${LOOKUP_LABELS[catalogKind]} already exists. Pick it from the list.`
+      : err.message);
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+// the + buttons in the product dialog
+productForm.addEventListener("click", async (e) => {
+  const btn = e.target.closest("[data-new], [data-action='new-salt']");
+  if (!btn) return;
+
+  if (btn.dataset.new) {
+    const kind = btn.dataset.new;
+    const select = btn.closest(".select-add").querySelector("select");
+    const created = await askNewItem(kind);
+    if (!created) return;
+    fillSelect(select, lookups[kind], LOOKUP_LABELS[kind]);
+    select.value = String(created.id);
+    setFieldError(select, "");
+  } else {
+    const row = btn.closest(".salt-row");
+    const nameInput = row.querySelector('[data-f="salt-name"]');
+    const created = await askNewItem("salts", nameInput.value.trim());
+    if (!created) return;
+    fillSaltOptions();
+    nameInput.value = created.name;
+    nameInput.classList.remove("invalid");
+    updateStrengthOptions(row);
+  }
+});
+
+async function openProductDialog(mode, product = null) {
+  try {
+    await loadLookups();
+  } catch (err) {
+    if (!err.redirecting) showToast(`Could not load the category, manufacturer and salt lists. ${err.message}`);
+    return;
+  }
+  fillSelect($("p-category"), lookups.categories, "category");
+  fillSelect($("p-manufacturer"), lookups.manufacturers, "manufacturer");
+  fillSaltOptions();
+
   productDialogState = { mode, id: product ? product.id : null, original: product };
   $("product-dialog-title").textContent = mode === "add" ? "Add product" : `Edit ${product.name}`;
   $("product-save").textContent = mode === "add" ? "Save product" : "Save changes";
@@ -772,6 +912,9 @@ function openProductDialog(mode, product = null) {
 
 $("add-product-btn").addEventListener("click", () => openProductDialog("add"));
 $("add-salt-btn").addEventListener("click", () => addSaltRow());
+saltList.addEventListener("input", (e) => {
+  if (e.target.matches('[data-f="salt-name"]')) updateStrengthOptions(e.target.closest(".salt-row"));
+});
 saltList.addEventListener("click", (e) => {
   if (!e.target.closest('[data-action="remove-salt"]')) return;
   e.target.closest(".salt-row").remove();
@@ -796,7 +939,13 @@ productForm.addEventListener("submit", async (e) => {
     return;
   }
 
-  const product = { ...values, gst_percent: Number(values.gst_percent), salts };
+  const product = {
+    ...values,
+    category_id: Number(values.category_id),
+    manufacturer_id: Number(values.manufacturer_id),
+    gst_percent: Number(values.gst_percent),
+    salts,
+  };
   const btn = $("product-save");
   const label = btn.textContent;
   btn.disabled = true;
@@ -810,10 +959,10 @@ productForm.addEventListener("submit", async (e) => {
       // send only what changed
       const changes = {};
       PRODUCT_FIELDS.forEach((n) => {
-        const before = n === "gst_percent" ? Number(original[n]) : (original[n] ?? "");
+        const before = ["gst_percent", "category_id", "manufacturer_id"].includes(n) ? Number(original[n]) : (original[n] ?? "");
         if (product[n] !== before) changes[n] = product[n];
       });
-      const savedSalts = (original.salts || []).map((s) => ({ name: s.name, strength: s.strength ?? "" }));
+      const savedSalts = (original.salts || []).map((s) => ({ salt_id: s.salt_id, strength: s.strength ?? "" }));
       if (JSON.stringify(salts) !== JSON.stringify(savedSalts)) changes.salts = salts;
 
       if (!Object.keys(changes).length) {
