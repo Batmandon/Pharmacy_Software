@@ -1,3 +1,6 @@
+from repositories.products import strength_label
+
+
 class AdminProductRepository:
     """Read queries for the admin dashboard (shows inactive and out-of-stock products too)."""
 
@@ -42,7 +45,7 @@ class AdminProductRepository:
             # a JSON list (json_agg), and stock/expiry are summed from the same batches.
             cur.execute(
                 f"""
-                SELECT p.id, p.name, p.strength, p.form, p.pack_size, p.schedule,
+                SELECT p.id, p.name, {strength_label("p")} AS strength, p.form, p.pack_size, p.schedule,
                        p.is_active, p.image_url,
                        c.name AS category, m.name AS manufacturer,
                        COALESCE(bs.total_stock, 0) AS total_stock,
@@ -90,8 +93,8 @@ class AdminProductRepository:
         """Product fields + salts, used to fill the edit dialog."""
         with self.conn.cursor() as cur:
             cur.execute(
-                """
-                SELECT p.id, p.name, p.strength, p.form, p.pack_size, p.schedule,
+                f"""
+                SELECT p.id, p.name, {strength_label("p")} AS strength, p.form, p.pack_size, p.schedule,
                        p.gst_percent, p.hsn_code, p.storage_condition, p.description,
                        p.image_url, p.is_active,
                        c.name AS category, m.name AS manufacturer,
