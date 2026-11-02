@@ -96,12 +96,12 @@ class AdminProductRepository:
                 f"""
                 SELECT p.id, p.name, {strength_label("p")} AS strength, p.form, p.pack_size, p.schedule,
                        p.gst_percent, p.hsn_code, p.storage_condition, p.description,
-                       p.image_url, p.is_active,
+                       p.image_url, p.is_active, p.category_id, p.manufacturer_id,
                        c.name AS category, m.name AS manufacturer,
                        COALESCE(
                            (
                                SELECT json_agg(
-                                          json_build_object('name', s.name, 'strength', ps.strength)
+                                          json_build_object('salt_id', ps.salt_id, 'name', s.name, 'strength', ps.strength)
                                           ORDER BY ps.id
                                       )
                                FROM product_salts ps
@@ -118,3 +118,17 @@ class AdminProductRepository:
                 (product_id,),
             )
             return cur.fetchone()
+
+    def salt_strengths(self):
+        """Strengths already used with each salt, offered as suggestions in the product dialog."""
+        with self.conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT salt_id, array_agg(DISTINCT strength ORDER BY strength) AS strengths
+                FROM product_salts
+                WHERE NULLIF(strength, '') IS NOT NULL
+                GROUP BY salt_id
+                ORDER BY salt_id
+                """
+            )
+            return {"items": cur.fetchall()}
