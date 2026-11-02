@@ -5,7 +5,7 @@ from repositories.signature import make_signature
 
 def strength_label(alias: str = "p") -> str:
     """SQL for "Paracetamol 650mg + Caffeine 30mg", built from the product's salts.
-     The strength lives on each salt."""
+    Products have no strength column any more; the strength lives on each salt."""
     return f"""(
         SELECT string_agg(concat_ws(' ', s.name, NULLIF(ps.strength, '')), ' + ' ORDER BY s.name)
         FROM product_salts ps
@@ -86,32 +86,16 @@ class ProductRepository:
     def __init__(self, conn):
         self.conn = conn
 
-    def _get_or_create(self, cur, table: str, name: str):
-        if table not in ("categories", "manufacturers", "salts"):
-            raise ValueError("Invalid lookup table")
-        cur.execute(
-            f"""
-            INSERT INTO {table} (name) VALUES (%s)
-            ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
-            RETURNING id
-            """,
-            (name,),
-        )
-        return cur.fetchone()["id"]
-
     def _save_salts(self, cur, product_id: int, salts):
         cur.execute("DELETE FROM product_salts WHERE product_id = %s", (product_id,))
         for salt in salts:
-            salt_id = self._get_or_create(cur, "salts", salt.name)
             cur.execute(
                 "INSERT INTO product_salts (product_id, salt_id, strength) VALUES (%s, %s, %s)",
-                (product_id, salt_id, salt.strength),
+                (product_id, salt.salt_id, salt.strength),
             )
 
     def add_product(self, product: AddProduct):
         with self.conn.cursor() as cur:
-            category_id = self._get_or_create(cur, "categories", product.category)
-            manufacturer_id = self._get_or_create(cur, "manufacturers", product.manufacturer)
             cur.execute(
                 """
                 INSERT INTO products (category_id, manufacturer_id, name, form, pack_size, schedule, gst_percent, hsn_code, storage_condition, description, image_url, signature)
@@ -119,8 +103,8 @@ class ProductRepository:
                 RETURNING id
                 """,
                 (
-                    category_id,
-                    manufacturer_id,
+                    product.category_id,
+                    product.manufacturer_id,
                     product.name,
                     product.form,
                     product.pack_size,
@@ -132,7 +116,7 @@ class ProductRepository:
                     product.image_url,
                     make_signature(
                         product.name, product.form, product.pack_size,
-                        [(s.name, s.strength) for s in product.salts],
+                        [(s.salt_id, s.strength) for s in product.salts],
                     ),
                 )
             )
@@ -142,9 +126,7 @@ class ProductRepository:
 
     def update_product(self, product_id: int, product: UpdateProduct):
         sent = product.model_fields_set
-        changes = product.model_dump(
-            exclude_unset=True, exclude={"salts", "category", "manufacturer"}
-        )
+        changes = product.model_dump(exclude_unset=True, exclude={"salts"})
         with self.conn.cursor() as cur:
             cur.execute(
                 "SELECT name, form, pack_size FROM products WHERE id = %s FOR UPDATE",
@@ -154,25 +136,18 @@ class ProductRepository:
             if current is None:
                 return {"error": f"Product with ID {product_id} does not exist."}
 
-            if "category" in sent:
-                changes["category_id"] = self._get_or_create(cur, "categories", product.category)
-            if "manufacturer" in sent:
-                changes["manufacturer_id"] = self._get_or_create(cur, "manufacturers", product.manufacturer)
-
             # the signature depends on name, form, pack size and salts: rebuild it when one of them changes
             if sent & {"name", "form", "pack_size", "salts"}:
                 if "salts" in sent:
-                    salts = [(s.name, s.strength) for s in product.salts]
+                    salts = [(s.salt_id, s.strength) for s in product.salts]
                 else:
                     cur.execute(
                         """
-                        SELECT s.name, ps.strength
-                        FROM product_salts ps JOIN salts s ON s.id = ps.salt_id
-                        WHERE ps.product_id = %s
+                        SELECT salt_id, strength FROM product_salts WHERE product_id = %s
                         """,
                         (product_id,),
                     )
-                    salts = [(r["name"], r["strength"]) for r in cur.fetchall()]
+                    salts = [(r["salt_id"], r["strength"]) for r in cur.fetchall()]
                 changes["signature"] = make_signature(
                     changes.get("name", current["name"]),
                     changes.get("form", current["form"]),
