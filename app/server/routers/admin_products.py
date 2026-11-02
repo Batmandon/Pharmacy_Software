@@ -24,10 +24,15 @@ def list_products(
     return AdminProductRepository(conn).list_products(search or None, page, page_size)
 
 
-# Must stay above "/{product_id}" so "counts" is not read as an id.
+# "counts" and "salt-strengths" must stay above "/{product_id}" so they are not read as an id.
 @router.get("/counts")
 def get_counts(conn=Depends(get_db)):
     return AdminProductRepository(conn).get_counts()
+
+
+@router.get("/salt-strengths")
+def get_salt_strengths(conn=Depends(get_db)):
+    return AdminProductRepository(conn).salt_strengths()
 
 
 @router.get("/{product_id}")
