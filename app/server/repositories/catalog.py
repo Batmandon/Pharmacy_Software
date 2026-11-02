@@ -6,7 +6,6 @@ from models.Catalog_model import (
     CreateBrand,
     CreateCategory,
     CreateManufacturer,
-    CreateProductSalt,
     CreateSalt,
     CreateSupplier,
 )
@@ -17,7 +16,6 @@ CatalogEntity = Literal[
     "manufacturers",
     "suppliers",
     "salts",
-    "product_salts",
 ]
 
 ENTITY_CONFIG = {
@@ -26,15 +24,11 @@ ENTITY_CONFIG = {
     "manufacturers": (CreateManufacturer, (("name",),)),
     "suppliers": (CreateSupplier, (("name",), ("phone",), ("gstin",))),
     "salts": (CreateSalt, (("name",),)),
-    "product_salts": (CreateProductSalt, (("product_id", "salt_id"),)),
 }
 
-REFERENCE_CHECKS = {
-    "product_salts": (
-        ("products", "product_id", "Product"),
-        ("salts", "salt_id", "Salt"),
-    ),
-}
+# no catalog entity points at another one any more (a product's salts are managed with the product,
+# because the product's duplicate-check signature depends on them)
+REFERENCE_CHECKS = {}
 
 DELETE_REFERENCES = {
     "categories": (("products", "category_id"),),
@@ -42,7 +36,6 @@ DELETE_REFERENCES = {
     "manufacturers": (("products", "manufacturer_id"),),
     "suppliers": (("batches", "supplier_id"),),
     "salts": (("products", "salt_id"), ("product_salts", "salt_id")),
-    "product_salts": (),
 }
 
 ENTITY_LABELS = {
@@ -51,7 +44,6 @@ ENTITY_LABELS = {
     "manufacturers": "manufacturer",
     "suppliers": "supplier",
     "salts": "salt",
-    "product_salts": "product-salt link",
 }
 
 
@@ -165,8 +157,10 @@ class CatalogRepository:
     def _find_duplicate(cur, entity: CatalogEntity, values: dict, excluding_id=None):
         unique_keys = ENTITY_CONFIG[entity][1]
         for columns in unique_keys:
+            # names are compared ignoring capital letters: "Fever" and "fever" are the same category
             condition = " AND ".join(
-                f"{column} IS NOT DISTINCT FROM %s" for column in columns
+                f"lower({column}) = lower(%s)" if column == "name" else f"{column} IS NOT DISTINCT FROM %s"
+                for column in columns
             )
             params = [values[column] for column in columns]
             exclude_clause = ""
