@@ -81,27 +81,3 @@ class EditSupplier(CatalogInput):
             if getattr(self, field) is None:
                 raise ValueError(f"{field} cannot be null")
         return self
-
-
-class CreateProductSalt(CatalogInput):
-    product_id: int = Field(gt=0)
-    salt_id: int = Field(gt=0)
-    strength: str | None = Field(default=None, max_length=20)
-
-
-class EditProductSalt(CatalogInput):
-    required_on_update: ClassVar[set[str]] = {"product_id", "salt_id"}
-
-    product_id: int | None = Field(default=None, gt=0)
-    salt_id: int | None = Field(default=None, gt=0)
-    strength: str | None = Field(default=None, max_length=20)
-
-    @model_validator(mode="after")
-    def validate_edit(self):
-        fields_set = self.model_fields_set
-        if not fields_set:
-            raise ValueError("Provide at least one field to update")
-        for field in self.required_on_update & fields_set:
-            if getattr(self, field) is None:
-                raise ValueError(f"{field} cannot be null")
-        return self
