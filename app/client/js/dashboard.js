@@ -6,6 +6,8 @@ const CONFIG = {
   PAGE_SIZE: 20,
   RECENT_ORDERS: 10,   // rows in the "Recent orders" card on the overview
   SEARCH_DELAY: 350,   // ms to wait after typing before searching products
+  ALERT_PAGE_SIZE: 5,  // rows per page in the expiry cards on the overview
+  EXPIRY_DAYS: 90,     // "expiring soon" window
 };
 
 const PATHS = {
@@ -15,7 +17,10 @@ const PATHS = {
   products: "/admin/products",       // GET   ?search=&page=&page_size=
   productsWrite: "/products",        // POST {product, batch}  |  PUT /{id} {product}  |  DELETE /{id}
   batches: "/batches",               // POST  |  PATCH /{id}  |  DELETE /{id}
-  orders: "/admin/orders",           // GET   ?status=&page=&page_size=   |   PATCH /{id}/status
+  orders: "/admin/orders",           // GET   ?status=&page=&page_size=   |   GET /{id}   |   PATCH /{id}/status
+  stockAlerts: "/batches/stock-alerts", // GET  a plain list of products running low
+  expiring: "/admin/expiry/expiring",   // GET  ?days=&page=&page_size=
+  expired: "/admin/expiry/expired",     // GET  ?page=&page_size=
 };
 
 // the order flow, same rules as the backend (it checks again, this only decides which options to show)
@@ -30,7 +35,9 @@ function nextStatuses(current) {
 // ===================== API LAYER =====================
 // Returns the parsed JSON. Throws an Error with a message that is safe to show to the user.
 // err.redirecting = true means we are already sending the user to another page.
-async function request(method, path, { params, body } = {}) {
+let alertsStale = false; // set after any write, the alert cards reload the next time the overview opens
+
+async function request(method, path, { params, body, allowArray = false } = {}) {
   const url = new URL(CONFIG.API_BASE + path);
   for (const [key, value] of Object.entries(params || {})) {
     if (value !== "" && value != null) url.searchParams.set(key, value);
@@ -60,7 +67,8 @@ async function request(method, path, { params, body } = {}) {
   try { data = await res.json(); } catch (_) {}
 
   if (!res.ok) throw new Error(errorMessage(data, res.status));
-  if (data === null || typeof data !== "object" || Array.isArray(data)) throw new Error("The server sent an unexpected response.");
+  if (data === null || typeof data !== "object" || (Array.isArray(data) && !allowArray)) throw new Error("The server sent an unexpected response.");
+  if (method !== "GET") alertsStale = true;
   return data;
 }
 
@@ -175,6 +183,8 @@ function showView(name, { updateHash = true } = {}) {
   $("view-title").textContent = titles[name];
   if (updateHash) history.replaceState(null, "", `#${name}`);
 
+  if (name === "overview" && alertsStale) { alertsStale = false; loadAlerts(); }
+
   // orders and products load the first time they are opened
   if (name === "orders" && !loaded.orders) { loaded.orders = true; loadOrders(); }
   if (name === "products" && !loaded.products) { loaded.products = true; loadProducts(); }
@@ -220,6 +230,7 @@ async function loadRecent() {
 
     body.replaceChildren(...items.map((o) => {
       const { row, cell } = cloneRow("recent-order-row");
+      row.dataset.id = o.id;
       cell("id").textContent = `#${o.id}`;
       cell("customer").textContent = o.customer || "";
       cell("date").textContent = formatDate(o.created_at);
@@ -232,6 +243,110 @@ async function loadRecent() {
     if (!err.redirecting) tableMessage(body, 5, `Could not load orders. ${err.message}`);
   }
 }
+
+// ===================== OVERVIEW: stock + expiry alerts =====================
+function lowStockRow(a) {
+  const { row, cell } = cloneRow("lowstock-row");
+  row.dataset.name = a.name;
+  cell("name").textContent = a.name;
+  cell("form").textContent = a.form || "";
+  const stock = toNumber(a.current_stock);
+  cell("stock").textContent = count.format(stock);
+  if (stock === 0) cell("stock").classList.add("text-danger");
+  cell("threshold").textContent = count.format(toNumber(a.alert_threshold));
+  return row;
+}
+
+async function loadLowStock() {
+  const body = $("lowstock-body");
+  try {
+    const data = await request("GET", PATHS.stockAlerts, { allowArray: true });
+    const items = Array.isArray(data) ? data : toItems(data);
+    body.replaceChildren(...items.map(lowStockRow));
+    $("lowstock-empty").hidden = items.length > 0;
+    $("lowstock-count").textContent = items.length ? `${count.format(items.length)} ${items.length === 1 ? "product" : "products"}` : "";
+  } catch (err) {
+    $("lowstock-count").textContent = "";
+    if (!err.redirecting) tableMessage(body, 3, `Could not load stock alerts. ${err.message}`);
+  }
+}
+
+// the two expiry cards share one loader, only the endpoint and the ids differ
+const expiryCards = {
+  expiring: { path: PATHS.expiring, params: { days: CONFIG.EXPIRY_DAYS }, page: 1, seq: 0 },
+  expired:  { path: PATHS.expired,  params: {},                           page: 1, seq: 0 },
+};
+
+function expiryTag(b) {
+  const d = toNumber(b.days_left);
+  const text = d < 0 ? `${-d}d ago` : d === 0 ? "Today" : `${d}d left`;
+  const kind = ["expired", "critical", "warning", "soon"].includes(b.status) ? b.status : "soon";
+  return { text, className: `tag tag-${kind}` };
+}
+
+function expiryRow(b) {
+  const { row, cell } = cloneRow("expiry-row");
+  row.dataset.name = b.name;
+  cell("name").textContent = b.name;
+  cell("batch").textContent = `Batch ${b.batch_no}`;
+  cell("date").textContent = formatDateOnly(b.expiry_date);
+  const tag = expiryTag(b);
+  cell("tag").textContent = tag.text;
+  cell("tag").className = tag.className;
+  cell("quantity").textContent = count.format(toNumber(b.quantity));
+  return row;
+}
+
+async function loadExpiry(kind) {
+  const card = expiryCards[kind];
+  const seq = ++card.seq;
+  const body = $(`${kind}-body`);
+  const pager = { prev: $(`${kind}-prev`), next: $(`${kind}-next`), info: $(`${kind}-page-info`) };
+
+  try {
+    const data = await request("GET", card.path, {
+      params: { ...card.params, page: card.page, page_size: CONFIG.ALERT_PAGE_SIZE },
+    });
+    if (seq !== card.seq) return;
+
+    const items = toItems(data);
+    const total = toNumber(data.total);
+    // a batch can be deleted or sold out meanwhile: step back if this page just became empty
+    if (items.length === 0 && card.page > 1) { card.page -= 1; return loadExpiry(kind); }
+
+    body.replaceChildren(...items.map(expiryRow));
+    $(`${kind}-empty`).hidden = items.length > 0;
+    $(`${kind}-count`).textContent = total ? `${count.format(total)} ${total === 1 ? "batch" : "batches"}` : "";
+    updatePager(pager, card.page, CONFIG.ALERT_PAGE_SIZE, total);
+  } catch (err) {
+    if (seq !== card.seq || err.redirecting) return;
+    $(`${kind}-count`).textContent = "";
+    tableMessage(body, 3, `Could not load this list. ${err.message}`);
+  }
+}
+
+for (const kind of Object.keys(expiryCards)) {
+  $(`${kind}-prev`).addEventListener("click", () => { expiryCards[kind].page -= 1; loadExpiry(kind); });
+  $(`${kind}-next`).addEventListener("click", () => { expiryCards[kind].page += 1; loadExpiry(kind); });
+}
+
+function loadAlerts() {
+  return Promise.allSettled([loadLowStock(), loadExpiry("expiring"), loadExpiry("expired")]);
+}
+
+// a product name in an alert card opens the Products view, searched for that name
+$("view-overview").addEventListener("click", (e) => {
+  const btn = e.target.closest('[data-action="find-product"]');
+  if (!btn) return;
+  const name = btn.closest("tr").dataset.name || "";
+  clearTimeout(searchTimer);
+  $("product-search").value = name;
+  productState.search = name;
+  productState.page = 1;
+  const alreadyLoaded = loaded.products;
+  showView("products"); // loads the list itself the first time
+  if (alreadyLoaded) loadProducts();
+});
 
 // ===================== ORDERS =====================
 const orderState = { page: 1, status: "", seq: 0 };
@@ -318,6 +433,89 @@ $("order-body").addEventListener("change", async (e) => {
   await Promise.allSettled([loadOrders(), loadRecent(), loadStats()]);
 });
 
+// ===================== ORDER DETAIL =====================
+const orderDialog = $("order-dialog");
+let orderDetailSeq = 0;
+
+function addressText(a) {
+  if (a && typeof a === "object") return [a.line, a.city, a.pincode].filter(Boolean).join(", ");
+  return a ? String(a) : "";
+}
+
+function itemRow(it) {
+  const tr = document.createElement("tr");
+  const name = document.createElement("td");
+  const title = document.createElement("div");
+  title.className = "cell-name";
+  title.textContent = it.name || "";
+  const sub = document.createElement("div");
+  sub.className = "cell-sub";
+  sub.textContent = [it.strength, it.pack_size].filter(Boolean).join(" · ");
+  name.append(title, sub);
+
+  const cells = [
+    ["", it.batch_no || ""],
+    ["num", count.format(toNumber(it.quantity))],
+    ["num", money.format(toNumber(it.unit_price))],
+    ["num", money.format(toNumber(it.line_total))],
+  ].map(([cls, text]) => {
+    const td = document.createElement("td");
+    if (cls) td.className = cls;
+    td.textContent = text;
+    return td;
+  });
+  tr.append(name, ...cells);
+  return tr;
+}
+
+async function openOrderDetail(id) {
+  const seq = ++orderDetailSeq;
+  $("order-dialog-title").textContent = `Order #${id}`;
+  $("order-detail").hidden = true;
+  $("od-loading").hidden = false;
+  $("order-message").className = "form-message";
+  $("order-message").textContent = "";
+  if (!orderDialog.open) orderDialog.showModal();
+
+  try {
+    const o = await request("GET", `${PATHS.orders}/${id}`);
+    if (seq !== orderDetailSeq) return;
+
+    setStatus($("od-status"), String(o.status));
+    $("od-customer").textContent = o.customer || "–";
+    $("od-phone").textContent = o.customer_phone || (o.address && o.address.phone) || "–";
+    $("od-email").textContent = o.customer_email || "–";
+    $("od-date").textContent = formatDate(o.created_at);
+    $("od-payment").textContent = PAYMENT_LABELS[o.payment_method] || o.payment_method || "–";
+    $("od-address").textContent = addressText(o.address) || "–";
+
+    const items = Array.isArray(o.items) ? o.items : [];
+    $("od-items").replaceChildren(...items.map(itemRow));
+
+    // the total also holds the delivery charge, which is not an item
+    const itemsSum = items.reduce((sum, it) => sum + toNumber(it.line_total), 0);
+    const fee = toNumber(o.total) - itemsSum;
+    $("od-fee-row").hidden = fee < 0.005;
+    $("od-fee").textContent = money.format(fee);
+    $("od-total").textContent = money.format(toNumber(o.total));
+
+    $("od-loading").hidden = true;
+    $("order-detail").hidden = false;
+  } catch (err) {
+    if (seq !== orderDetailSeq || err.redirecting) return;
+    $("od-loading").hidden = true;
+    dialogMessage($("order-message"), `Could not load this order. ${err.message}`);
+  }
+}
+
+// the order number in the Orders table and in Recent orders
+for (const id of ["order-body", "recent-orders-body"]) {
+  $(id).addEventListener("click", (e) => {
+    const btn = e.target.closest('[data-action="view-order"]');
+    if (btn) openOrderDetail(btn.closest("tr").dataset.id);
+  });
+}
+
 // ===================== PRODUCTS =====================
 const productState = { page: 1, search: "", seq: 0 };
 const productPager = { prev: $("page-prev"), next: $("page-next"), info: $("page-info") };
@@ -337,6 +535,14 @@ function productRow(p) {
 
   cell("name").textContent = p.name;
   cell("sub").textContent = [p.form, p.strength, p.pack_size].filter(Boolean).join(" · ");
+
+  // photo if there is a web address for it; a broken link keeps the pill icon
+  const img = cell("img");
+  if (/^https?:\/\//i.test(p.image_url || "")) {
+    img.addEventListener("load", () => img.classList.add("loaded"), { once: true });
+    img.addEventListener("error", () => img.removeAttribute("src"), { once: true });
+    img.src = p.image_url;
+  }
   cell("category").textContent = p.category || "";
   cell("stock").textContent = count.format(toNumber(p.total_stock));
   setStatus(cell("status"), p.is_active ? "active" : "inactive");
@@ -416,7 +622,7 @@ $("page-next").addEventListener("click", () => { productState.page += 1; loadPro
 
 // ---------- form helpers (shared by the product and batch dialogs) ----------
 const PRODUCT_FIELDS = [
-  "name", "category", "manufacturer", "strength", "form", "pack_size",
+  "name", "category", "manufacturer", "form", "pack_size",
   "schedule", "gst_percent", "hsn_code", "storage_condition", "description", "image_url",
 ];
 const BATCH_FIELDS = [
@@ -461,7 +667,6 @@ function validateProduct(v) {
   if (!v.name) e.name = "Name is required."; else tooLong(e, v, "name", 20, "Name");
   if (!v.category) e.category = "Category is required."; else tooLong(e, v, "category", 30, "Category");
   if (!v.manufacturer) e.manufacturer = "Manufacturer is required."; else tooLong(e, v, "manufacturer", 100, "Manufacturer");
-  tooLong(e, v, "strength", 20, "Strength");
   if (!v.form) e.form = "Select a form.";
   tooLong(e, v, "pack_size", 20, "Pack size");
   if (!v.schedule) e.schedule = "Select a schedule.";
@@ -826,6 +1031,7 @@ async function init() {
   showView(location.hash.slice(1) || "overview", { updateHash: false });
   loadStats();
   loadRecent();
+  loadAlerts();
 }
 
 init();
