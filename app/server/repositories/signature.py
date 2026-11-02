@@ -13,7 +13,8 @@ def _n(text):
 def make_signature(name, form, pack_size, salts):
     """Fingerprint of what makes a product "the same product".
 
-    salts: list of (salt_name, salt_strength). Their order does not matter.
+    salts: list of (salt_id, salt_strength). Their order does not matter.
+    The salt's id is used, not its name, so renaming a salt never changes a product's signature.
     The products table has UNIQUE (signature), so the database itself rejects duplicates,
     on insert and on edit, even when two requests arrive at the same moment.
     """
@@ -21,6 +22,6 @@ def make_signature(name, form, pack_size, salts):
         _n(name),
         _n(form),
         _n(pack_size),
-        sorted(f"{_n(salt_name)}:{_n(salt_strength)}" for salt_name, salt_strength in salts),
+        sorted(f"{salt_id}:{_n(salt_strength)}" for salt_id, salt_strength in salts),
     ]
     return hashlib.sha256(json.dumps(parts).encode()).hexdigest()
