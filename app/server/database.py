@@ -69,7 +69,6 @@ def init_db():
         manufacturer_id BIGINT REFERENCES manufacturers(id),
         salt_id BIGINT REFERENCES salts(id),
         name TEXT NOT NULL,
-        strength TEXT,
         form TEXT NOT NULL CHECK (form IN (
             'Tablet','Capsule','Syrup','Suspension','Injection',
             'Ointment','Cream','Gel','Drops','Powder',
@@ -86,7 +85,9 @@ def init_db():
         is_active BOOLEAN NOT NULL DEFAULT TRUE,
         created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-        UNIQUE (name, strength, form, pack_size)
+        -- fingerprint of name + form + pack size + salts (see repositories/signature.py)
+        signature TEXT NOT NULL,
+        CONSTRAINT products_signature_key UNIQUE (signature)
     );
 
     CREATE TABLE IF NOT EXISTS product_details (
