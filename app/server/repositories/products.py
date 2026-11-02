@@ -1,10 +1,22 @@
 from models.Product_model import AddProduct, UpdateProduct
 from repositories.pricing import selling_price
+from repositories.signature import make_signature
+
+
+def strength_label(alias: str = "p") -> str:
+    """SQL for "Paracetamol 650mg + Caffeine 30mg", built from the product's salts.
+     The strength lives on each salt."""
+    return f"""(
+        SELECT string_agg(concat_ws(' ', s.name, NULLIF(ps.strength, '')), ' + ' ORDER BY s.name)
+        FROM product_salts ps
+        JOIN salts s ON s.id = ps.salt_id
+        WHERE ps.product_id = {alias}.id
+    )"""
+
 
 PRODUCT_PUBLIC_COLUMNS = (
     "id",
     "name",
-    "strength",
     "form",
     "pack_size",
     "schedule",
@@ -16,10 +28,10 @@ PRODUCT_PUBLIC_COLUMNS = (
 
 SELLABLE_BATCH_CONDITION = "quantity > 0 AND expiry_date > CURRENT_DATE"
 
-PRODUCT_CARD_SELECT = """
+PRODUCT_CARD_SELECT = f"""
     p.id,
     p.name,
-    p.strength,
+    {strength_label("p")} AS strength,
     p.form,
     p.pack_size,
     p.schedule,
@@ -102,7 +114,7 @@ class ProductRepository:
             manufacturer_id = self._get_or_create(cur, "manufacturers", product.manufacturer)
             cur.execute(
                 """
-                INSERT INTO products (category_id, manufacturer_id, name, strength, form, pack_size, schedule, gst_percent, hsn_code, storage_condition, description, image_url)
+                INSERT INTO products (category_id, manufacturer_id, name, form, pack_size, schedule, gst_percent, hsn_code, storage_condition, description, image_url, signature)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING id
                 """,
@@ -110,7 +122,6 @@ class ProductRepository:
                     category_id,
                     manufacturer_id,
                     product.name,
-                    product.strength,
                     product.form,
                     product.pack_size,
                     product.schedule,
@@ -118,7 +129,11 @@ class ProductRepository:
                     product.hsn_code,
                     product.storage_condition,
                     product.description,
-                    product.image_url
+                    product.image_url,
+                    make_signature(
+                        product.name, product.form, product.pack_size,
+                        [(s.name, s.strength) for s in product.salts],
+                    ),
                 )
             )
             product_id = cur.fetchone()["id"]
@@ -131,14 +146,39 @@ class ProductRepository:
             exclude_unset=True, exclude={"salts", "category", "manufacturer"}
         )
         with self.conn.cursor() as cur:
-            cur.execute("SELECT 1 FROM products WHERE id = %s FOR UPDATE", (product_id,))
-            if cur.fetchone() is None:
+            cur.execute(
+                "SELECT name, form, pack_size FROM products WHERE id = %s FOR UPDATE",
+                (product_id,),
+            )
+            current = cur.fetchone()
+            if current is None:
                 return {"error": f"Product with ID {product_id} does not exist."}
 
             if "category" in sent:
                 changes["category_id"] = self._get_or_create(cur, "categories", product.category)
             if "manufacturer" in sent:
                 changes["manufacturer_id"] = self._get_or_create(cur, "manufacturers", product.manufacturer)
+
+            # the signature depends on name, form, pack size and salts: rebuild it when one of them changes
+            if sent & {"name", "form", "pack_size", "salts"}:
+                if "salts" in sent:
+                    salts = [(s.name, s.strength) for s in product.salts]
+                else:
+                    cur.execute(
+                        """
+                        SELECT s.name, ps.strength
+                        FROM product_salts ps JOIN salts s ON s.id = ps.salt_id
+                        WHERE ps.product_id = %s
+                        """,
+                        (product_id,),
+                    )
+                    salts = [(r["name"], r["strength"]) for r in cur.fetchall()]
+                changes["signature"] = make_signature(
+                    changes.get("name", current["name"]),
+                    changes.get("form", current["form"]),
+                    changes.get("pack_size", current["pack_size"]),
+                    salts,
+                )
 
             if changes:
                 assignments = ", ".join(f"{column} = %s" for column in changes)
@@ -167,7 +207,7 @@ class ProductRepository:
         with self.conn.cursor() as cur:
             cur.execute(
                 f"""
-                SELECT {", ".join(PRODUCT_PUBLIC_COLUMNS)}
+                SELECT {", ".join(PRODUCT_PUBLIC_COLUMNS)}, {strength_label("products")} AS strength
                 FROM products
                 WHERE id = %s
                   AND {PRODUCT_IN_STOCK_CONDITION}
@@ -179,8 +219,8 @@ class ProductRepository:
     def get_product_details(self, product_id: int):
         with self.conn.cursor() as cur:
             cur.execute(
-                """
-                SELECT p.id, p.name, p.strength, p.form, p.pack_size, p.schedule,
+                f"""
+                SELECT p.id, p.name, {strength_label("p")} AS strength, p.form, p.pack_size, p.schedule,
                        p.description, p.image_url, p.storage_condition,
                        br.name AS brand, c.name AS category,
                        COALESCE(stock.available_quantity, 0) AS available_quantity,
