@@ -17,7 +17,10 @@ from models.Catalog_model import (
 )
 from repositories.catalog import CatalogRepository
 
-router = APIRouter(tags=["catalog"])
+router = APIRouter(
+    tags=["catalog"],
+    dependencies=[Depends(require_admin)],
+)
 
 
 def _result_or_raise(result):
@@ -44,7 +47,7 @@ def list_categories(conn=Depends(get_db)):
 
 
 @router.post("/categories", status_code=201)
-def create_category(item: CreateCategory, admin=Depends(require_admin), conn=Depends(get_db)):
+def create_category(item: CreateCategory, conn=Depends(get_db)):
     return _run(lambda: CatalogRepository(conn).create_item("categories", item))
 
 
@@ -52,7 +55,6 @@ def create_category(item: CreateCategory, admin=Depends(require_admin), conn=Dep
 def edit_category(
     item: EditCategory,
     item_id: int = Path(ge=1),
-    admin=Depends(require_admin),
     conn=Depends(get_db),
 ):
     return _run(lambda: CatalogRepository(conn).edit_item("categories", item_id, item))
@@ -61,7 +63,6 @@ def edit_category(
 @router.delete("/categories/{item_id}")
 def delete_category(
     item_id: int = Path(ge=1),
-    admin=Depends(require_admin),
     conn=Depends(get_db),
 ):
     return _run(lambda: CatalogRepository(conn).delete_item("categories", item_id))
@@ -73,7 +74,7 @@ def list_brands(conn=Depends(get_db)):
 
 
 @router.post("/brands", status_code=201)
-def create_brand(item: CreateBrand, admin=Depends(require_admin), conn=Depends(get_db)):
+def create_brand(item: CreateBrand, conn=Depends(get_db)):
     return _run(lambda: CatalogRepository(conn).create_item("brands", item))
 
 
@@ -81,7 +82,6 @@ def create_brand(item: CreateBrand, admin=Depends(require_admin), conn=Depends(g
 def edit_brand(
     item: EditBrand,
     item_id: int = Path(ge=1),
-    admin=Depends(require_admin),
     conn=Depends(get_db),
 ):
     return _run(lambda: CatalogRepository(conn).edit_item("brands", item_id, item))
@@ -90,7 +90,6 @@ def edit_brand(
 @router.delete("/brands/{item_id}")
 def delete_brand(
     item_id: int = Path(ge=1),
-    admin=Depends(require_admin),
     conn=Depends(get_db),
 ):
     return _run(lambda: CatalogRepository(conn).delete_item("brands", item_id))
@@ -102,11 +101,7 @@ def list_manufacturers(conn=Depends(get_db)):
 
 
 @router.post("/manufacturers", status_code=201)
-def create_manufacturer(
-    item: CreateManufacturer,
-    admin=Depends(require_admin),
-    conn=Depends(get_db),
-):
+def create_manufacturer(item: CreateManufacturer, conn=Depends(get_db)):
     return _run(lambda: CatalogRepository(conn).create_item("manufacturers", item))
 
 
@@ -114,7 +109,6 @@ def create_manufacturer(
 def edit_manufacturer(
     item: EditManufacturer,
     item_id: int = Path(ge=1),
-    admin=Depends(require_admin),
     conn=Depends(get_db),
 ):
     return _run(lambda: CatalogRepository(conn).edit_item("manufacturers", item_id, item))
@@ -123,19 +117,18 @@ def edit_manufacturer(
 @router.delete("/manufacturers/{item_id}")
 def delete_manufacturer(
     item_id: int = Path(ge=1),
-    admin=Depends(require_admin),
     conn=Depends(get_db),
 ):
     return _run(lambda: CatalogRepository(conn).delete_item("manufacturers", item_id))
 
 
 @router.get("/suppliers")
-def list_suppliers(admin=Depends(require_admin), conn=Depends(get_db)):
+def list_suppliers(conn=Depends(get_db)):
     return CatalogRepository(conn).list_items("suppliers")
 
 
 @router.post("/suppliers", status_code=201)
-def create_supplier(item: CreateSupplier, admin=Depends(require_admin), conn=Depends(get_db)):
+def create_supplier(item: CreateSupplier, conn=Depends(get_db)):
     return _run(lambda: CatalogRepository(conn).create_item("suppliers", item))
 
 
@@ -143,7 +136,6 @@ def create_supplier(item: CreateSupplier, admin=Depends(require_admin), conn=Dep
 def edit_supplier(
     item: EditSupplier,
     item_id: int = Path(ge=1),
-    admin=Depends(require_admin),
     conn=Depends(get_db),
 ):
     return _run(lambda: CatalogRepository(conn).edit_item("suppliers", item_id, item))
@@ -152,7 +144,6 @@ def edit_supplier(
 @router.delete("/suppliers/{item_id}")
 def delete_supplier(
     item_id: int = Path(ge=1),
-    admin=Depends(require_admin),
     conn=Depends(get_db),
 ):
     return _run(lambda: CatalogRepository(conn).delete_item("suppliers", item_id))
@@ -164,7 +155,7 @@ def list_salts(conn=Depends(get_db)):
 
 
 @router.post("/salts", status_code=201)
-def create_salt(item: CreateSalt, admin=Depends(require_admin), conn=Depends(get_db)):
+def create_salt(item: CreateSalt, conn=Depends(get_db)):
     return _run(lambda: CatalogRepository(conn).create_item("salts", item))
 
 
@@ -172,7 +163,6 @@ def create_salt(item: CreateSalt, admin=Depends(require_admin), conn=Depends(get
 def edit_salt(
     item: EditSalt,
     item_id: int = Path(ge=1),
-    admin=Depends(require_admin),
     conn=Depends(get_db),
 ):
     return _run(lambda: CatalogRepository(conn).edit_item("salts", item_id, item))
@@ -181,7 +171,6 @@ def edit_salt(
 @router.delete("/salts/{item_id}")
 def delete_salt(
     item_id: int = Path(ge=1),
-    admin=Depends(require_admin),
     conn=Depends(get_db),
 ):
     return _run(lambda: CatalogRepository(conn).delete_item("salts", item_id))
