@@ -1,6 +1,7 @@
 from auth import get_user
 from decimal import Decimal, ROUND_HALF_UP
 from repositories.pricing import selling_price
+from repositories.products import strength_label
 
 # Schedules that need a prescription. Orders with these are blocked until the
 # prescription flow is built.
@@ -148,8 +149,8 @@ class OrderRepository:
     def get_cart_items(self, user_id: int) -> dict:
         with self.conn.cursor() as cur:
             cur.execute(
-                """
-                SELECT c.product_id, c.quantity, p.name, p.strength, p.pack_size,
+                f"""
+                SELECT c.product_id, c.quantity, p.name, {strength_label("p")} AS strength, p.pack_size,
                        p.image_url AS img_url, p.is_active,
                        b.id AS batch_id, b.quantity AS batch_quantity,
                        b.mrp, b.discount_percent
@@ -415,6 +416,41 @@ class OrderRepository:
                 """
                 SELECT p.name, b.batch_no, oi.quantity, oi.unit_price,
                        oi.mrp, oi.discount_percent
+                FROM order_items oi
+                JOIN products p ON p.id = oi.product_id
+                JOIN batches b ON b.id = oi.batch_id
+                WHERE oi.order_id = %s
+                ORDER BY oi.id
+                """,
+                (order_id,),
+            )
+            order["items"] = cur.fetchall()
+
+        return order
+
+    def get_order_admin(self, order_id: int):
+        """Admin: ANY customer's order with the customer's details and its items."""
+        with self.conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT o.id, o.status, o.address, o.total, o.payment_method, o.created_at,
+                       u.first_name || ' ' || u.last_name AS customer,
+                       u.phone AS customer_phone, u.email AS customer_email
+                FROM orders o
+                JOIN users u ON u.id = o.user_id
+                WHERE o.id = %s
+                """,
+                (order_id,),
+            )
+            order = cur.fetchone()
+            if order is None:
+                return None
+
+            cur.execute(
+                f"""
+                SELECT p.name, {strength_label("p")} AS strength, p.pack_size, b.batch_no, oi.quantity,
+                       oi.unit_price, oi.mrp, oi.discount_percent,
+                       (oi.unit_price * oi.quantity) AS line_total
                 FROM order_items oi
                 JOIN products p ON p.id = oi.product_id
                 JOIN batches b ON b.id = oi.batch_id
