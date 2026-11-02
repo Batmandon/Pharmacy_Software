@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <link rel="stylesheet" href="dashboard.css">
+  <link rel="stylesheet" href="css/dashboard.css">
 </head>
 <body>
 
@@ -370,10 +370,14 @@
     </tr>
   </template>
 
+  <datalist id="salt-options"></datalist>
+
   <template id="salt-row">
     <div class="salt-row">
-      <input type="text" class="input" data-f="salt-name" placeholder="Salt name" maxlength="100" aria-label="Salt name">
-      <input type="text" class="input" data-f="salt-strength" placeholder="Strength" maxlength="20" aria-label="Salt strength">
+      <input type="text" class="input" data-f="salt-name" list="salt-options" placeholder="Search salt" maxlength="100" autocomplete="off" aria-label="Salt name">
+      <input type="text" class="input" data-f="salt-strength" placeholder="Strength" maxlength="20" autocomplete="off" aria-label="Salt strength">
+      <datalist data-f="strength-options"></datalist>
+      <button type="button" class="icon-btn" data-action="new-salt" aria-label="Add a new salt" title="Add a new salt"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
       <button type="button" class="icon-btn danger" data-action="remove-salt" aria-label="Remove salt"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
     </div>
   </template>
@@ -395,11 +399,17 @@
           <div class="field"><label for="p-name">Name</label>
             <input type="text" id="p-name" name="name" class="input" maxlength="20" autofocus><small class="error"></small></div>
           <div class="field"><label for="p-category">Category</label>
-            <input type="text" id="p-category" name="category" class="input" maxlength="30"><small class="error"></small></div>
+            <div class="select-add">
+              <select id="p-category" name="category_id" class="input"></select>
+              <button type="button" class="icon-btn" data-new="categories" aria-label="Add a new category" title="Add a new category"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
+            </div><small class="error"></small></div>
         </div>
 
         <div class="field"><label for="p-manufacturer">Manufacturer</label>
-          <input type="text" id="p-manufacturer" name="manufacturer" class="input" maxlength="100"><small class="error"></small></div>
+          <div class="select-add">
+            <select id="p-manufacturer" name="manufacturer_id" class="input"></select>
+            <button type="button" class="icon-btn" data-new="manufacturers" aria-label="Add a new manufacturer" title="Add a new manufacturer"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
+          </div><small class="error"></small></div>
 
         <div class="grid-3">
           <div class="field"><label for="p-form">Form</label>
@@ -479,6 +489,20 @@
       <div class="dialog-actions">
         <button type="button" class="btn btn-ghost" data-close>Cancel</button>
         <button type="submit" class="btn btn-primary" id="product-save">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- ===== New category / manufacturer / salt ===== -->
+  <dialog id="catalog-dialog" class="dialog dialog-small" aria-labelledby="catalog-title">
+    <form id="catalog-form" class="dialog-body" novalidate>
+      <h3 id="catalog-title">New item</h3>
+      <div id="catalog-message" class="form-message" role="alert"></div>
+      <div class="field"><label for="catalog-name">Name</label>
+        <input type="text" id="catalog-name" class="input" maxlength="100" autocomplete="off"><small class="error"></small></div>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-ghost" data-close>Cancel</button>
+        <button type="submit" class="btn btn-primary" id="catalog-save">Save</button>
       </div>
     </form>
   </dialog>
@@ -585,7 +609,7 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="config.js"></script>
-  <script src="dashboard.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/dashboard.js"></script>
 </body>
 </html>
