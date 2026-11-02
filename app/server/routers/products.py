@@ -11,6 +11,8 @@ from models.ProductWithBatch_model import ProductWithBatch, UpdateProductWithBat
 
 # One router for both products and batches.
 # No prefix here, so every path is written in full (URLs stay the same as before).
+DUPLICATE_PRODUCT = "A product with the same name, form, pack size and salts (with strengths) already exists."
+
 router = APIRouter(tags=["products"])
 logger = logging.getLogger(__name__)
 
@@ -72,10 +74,7 @@ def add_product(
     try:
         created_product = ProductRepository(conn).add_product(data.product)
     except psycopg.errors.UniqueViolation:
-        raise HTTPException(
-            status_code=409,
-            detail="This product (same name, strength, form and pack size) already exists.",
-        )
+        raise HTTPException(status_code=409, detail=DUPLICATE_PRODUCT)
 
     batch = CreateBatch(product_id=created_product["id"], **data.batch.model_dump())
     created_batch = BatchRepository(conn).create_batch(batch)
@@ -111,11 +110,11 @@ def update_product(product_id: int, data: UpdateProductWithBatch, admin=Depends(
             result = batches.edit_batch(data.batch_id, data.batch)
             if "error" in result:
                 raise HTTPException(status_code=result["status_code"], detail=result["error"])
-    except psycopg.errors.UniqueViolation:
-        raise HTTPException(
-            status_code=409,
-            detail="Another product with the same name, strength, form and pack size already exists.",
-        )
+    except psycopg.errors.UniqueViolation as exc:
+        # two different unique rules can fire here: the product signature, or the batch number
+        if exc.diag.constraint_name == "products_signature_key":
+            raise HTTPException(status_code=409, detail=DUPLICATE_PRODUCT)
+        raise HTTPException(status_code=409, detail="This batch number already exists for the product.")
 
     return {
         "message": "Updated successfully",
