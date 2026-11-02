@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <link rel="stylesheet" href="css/dashboard.css">
+  <link rel="stylesheet" href="dashboard.css">
 </head>
 <body>
 
@@ -94,6 +94,80 @@
           </div>
           <p class="empty" id="recent-orders-empty" hidden>No orders yet.</p>
         </section>
+
+        <div class="alerts">
+
+          <section class="card">
+            <div class="card-head">
+              <h2 class="card-title">Low stock</h2>
+              <span class="muted" id="lowstock-count"></span>
+            </div>
+            <div class="table-wrap scroll-box">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th scope="col">Product</th>
+                    <th scope="col" class="num">In stock</th>
+                    <th scope="col" class="num">Alert at</th>
+                  </tr>
+                </thead>
+                <tbody id="lowstock-body"></tbody>
+              </table>
+            </div>
+            <p class="empty" id="lowstock-empty" hidden>Nothing is running low.</p>
+          </section>
+
+          <section class="card">
+            <div class="card-head">
+              <h2 class="card-title">Expiring in 90 days</h2>
+              <span class="muted" id="expiring-count"></span>
+            </div>
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th scope="col">Product</th>
+                    <th scope="col">Expiry</th>
+                    <th scope="col" class="num">Qty</th>
+                  </tr>
+                </thead>
+                <tbody id="expiring-body"></tbody>
+              </table>
+            </div>
+            <p class="empty" id="expiring-empty" hidden>No batch expires in the next 90 days.</p>
+            <div class="pager">
+              <button type="button" class="btn btn-ghost btn-sm" id="expiring-prev">Previous</button>
+              <span class="muted" id="expiring-page-info"></span>
+              <button type="button" class="btn btn-ghost btn-sm" id="expiring-next">Next</button>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="card-head">
+              <h2 class="card-title">Expired, still in stock</h2>
+              <span class="muted" id="expired-count"></span>
+            </div>
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th scope="col">Product</th>
+                    <th scope="col">Expired</th>
+                    <th scope="col" class="num">Qty</th>
+                  </tr>
+                </thead>
+                <tbody id="expired-body"></tbody>
+              </table>
+            </div>
+            <p class="empty" id="expired-empty" hidden>No expired batch in stock.</p>
+            <div class="pager">
+              <button type="button" class="btn btn-ghost btn-sm" id="expired-prev">Previous</button>
+              <span class="muted" id="expired-page-info"></span>
+              <button type="button" class="btn btn-ghost btn-sm" id="expired-next">Next</button>
+            </div>
+          </section>
+
+        </div>
 
       </section>
 
@@ -182,7 +256,7 @@
   <!-- ===== Row templates (JS clones these) ===== -->
   <template id="recent-order-row">
     <tr>
-      <td data-f="id"></td>
+      <td><button type="button" class="link-btn" data-action="view-order" data-f="id"></button></td>
       <td data-f="customer"></td>
       <td data-f="date"></td>
       <td data-f="total" class="num"></td>
@@ -192,7 +266,7 @@
 
   <template id="order-row">
     <tr>
-      <td data-f="id"></td>
+      <td><button type="button" class="link-btn" data-action="view-order" data-f="id"></button></td>
       <td data-f="customer"></td>
       <td data-f="date"></td>
       <td data-f="payment"></td>
@@ -202,11 +276,41 @@
     </tr>
   </template>
 
+  <template id="lowstock-row">
+    <tr>
+      <td>
+        <button type="button" class="link-btn" data-action="find-product" data-f="name"></button>
+        <div class="cell-sub" data-f="form"></div>
+      </td>
+      <td class="num" data-f="stock"></td>
+      <td class="num" data-f="threshold"></td>
+    </tr>
+  </template>
+
+  <template id="expiry-row">
+    <tr>
+      <td>
+        <button type="button" class="link-btn" data-action="find-product" data-f="name"></button>
+        <div class="cell-sub" data-f="batch"></div>
+      </td>
+      <td><span data-f="date"></span> <span class="tag" data-f="tag"></span></td>
+      <td class="num" data-f="quantity"></td>
+    </tr>
+  </template>
+
   <template id="product-row">
     <tr>
       <td>
-        <div class="cell-name" data-f="name"></div>
-        <div class="cell-sub" data-f="sub"></div>
+        <div class="cell-product">
+          <span class="thumb" aria-hidden="true">
+            <i class="fa-solid fa-pills"></i>
+            <img data-f="img" alt="" referrerpolicy="no-referrer">
+          </span>
+          <div>
+            <div class="cell-name" data-f="name"></div>
+            <div class="cell-sub" data-f="sub"></div>
+          </div>
+        </div>
       </td>
       <td data-f="category"></td>
       <td class="num" data-f="stock"></td>
@@ -294,12 +398,8 @@
             <input type="text" id="p-category" name="category" class="input" maxlength="30"><small class="error"></small></div>
         </div>
 
-        <div class="grid-2">
-          <div class="field"><label for="p-manufacturer">Manufacturer</label>
-            <input type="text" id="p-manufacturer" name="manufacturer" class="input" maxlength="100"><small class="error"></small></div>
-          <div class="field"><label for="p-strength">Strength</label>
-            <input type="text" id="p-strength" name="strength" class="input" placeholder="e.g. 650mg" maxlength="20"><small class="error"></small></div>
-        </div>
+        <div class="field"><label for="p-manufacturer">Manufacturer</label>
+          <input type="text" id="p-manufacturer" name="manufacturer" class="input" maxlength="100"><small class="error"></small></div>
 
         <div class="grid-3">
           <div class="field"><label for="p-form">Form</label>
@@ -430,6 +530,47 @@
     </form>
   </dialog>
 
+  <!-- ===== Order detail dialog ===== -->
+  <dialog id="order-dialog" class="dialog dialog-wide" aria-labelledby="order-dialog-title">
+    <div class="dialog-body">
+      <div class="dialog-head">
+        <h3 id="order-dialog-title">Order</h3>
+        <button type="button" class="icon-btn" data-close aria-label="Close"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+      </div>
+      <div id="order-message" class="form-message" role="alert"></div>
+      <div id="order-detail" hidden>
+        <p><span class="status" id="od-status"></span></p>
+        <dl class="detail-grid">
+          <div><dt>Customer</dt><dd id="od-customer"></dd></div>
+          <div><dt>Phone</dt><dd id="od-phone"></dd></div>
+          <div><dt>Email</dt><dd id="od-email"></dd></div>
+          <div><dt>Placed on</dt><dd id="od-date"></dd></div>
+          <div><dt>Payment</dt><dd id="od-payment"></dd></div>
+          <div><dt>Address</dt><dd id="od-address"></dd></div>
+        </dl>
+        <div class="table-wrap">
+          <table class="table table-inner">
+            <thead>
+              <tr>
+                <th scope="col">Product</th>
+                <th scope="col">Batch</th>
+                <th scope="col" class="num">Qty</th>
+                <th scope="col" class="num">Price</th>
+                <th scope="col" class="num">Amount</th>
+              </tr>
+            </thead>
+            <tbody id="od-items"></tbody>
+          </table>
+        </div>
+        <dl class="totals">
+          <div id="od-fee-row" hidden><dt>Delivery charge</dt><dd id="od-fee"></dd></div>
+          <div class="totals-grand"><dt>Total</dt><dd id="od-total"></dd></div>
+        </dl>
+      </div>
+      <p class="empty" id="od-loading">Loading...</p>
+    </div>
+  </dialog>
+
   <!-- ===== Confirm dialog (delete, logout) ===== -->
   <dialog id="confirm-dialog" class="dialog dialog-small" aria-labelledby="confirm-title">
     <form method="dialog" class="dialog-body">
@@ -444,7 +585,7 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="js/config.js" defer></script>
-  <script src="js/dashboard.js" defer></script>
+  <script src="config.js"></script>
+  <script src="dashboard.js"></script>
 </body>
 </html>
