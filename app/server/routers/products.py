@@ -11,6 +11,21 @@ from models.ProductWithBatch_model import ProductWithBatch, UpdateProductWithBat
 
 # One router for both products and batches.
 # No prefix here, so every path is written in full (URLs stay the same as before).
+FK_MESSAGES = {
+    "products_category_id_fkey": "That category does not exist.",
+    "products_manufacturer_id_fkey": "That manufacturer does not exist.",
+    "product_salts_salt_id_fkey": "One of the salts does not exist.",
+    "batches_supplier_id_fkey": "That supplier does not exist.",
+}
+
+
+def _missing_item(exc):
+    return HTTPException(
+        status_code=422,
+        detail=FK_MESSAGES.get(exc.diag.constraint_name, "A selected item does not exist."),
+    )
+
+
 DUPLICATE_PRODUCT = "A product with the same name, form, pack size and salts (with strengths) already exists."
 
 router = APIRouter(tags=["products"])
@@ -75,6 +90,8 @@ def add_product(
         created_product = ProductRepository(conn).add_product(data.product)
     except psycopg.errors.UniqueViolation:
         raise HTTPException(status_code=409, detail=DUPLICATE_PRODUCT)
+    except psycopg.errors.ForeignKeyViolation as exc:
+        raise _missing_item(exc)
 
     batch = CreateBatch(product_id=created_product["id"], **data.batch.model_dump())
     created_batch = BatchRepository(conn).create_batch(batch)
@@ -115,6 +132,8 @@ def update_product(product_id: int, data: UpdateProductWithBatch, admin=Depends(
         if exc.diag.constraint_name == "products_signature_key":
             raise HTTPException(status_code=409, detail=DUPLICATE_PRODUCT)
         raise HTTPException(status_code=409, detail="This batch number already exists for the product.")
+    except psycopg.errors.ForeignKeyViolation as exc:
+        raise _missing_item(exc)
 
     return {
         "message": "Updated successfully",
