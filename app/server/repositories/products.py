@@ -199,8 +199,13 @@ class ProductRepository:
                 SELECT p.id, p.name, {strength_label("p")} AS strength, p.form, p.pack_size, p.schedule,
                        p.description, p.image_url, p.storage_condition,
                        br.name AS brand, c.name AS category,
-                       COALESCE(stock.available_quantity, 0) AS available_quantity,
-                       (COALESCE(stock.available_quantity, 0) > 0) AS in_stock,
+                       CASE WHEN EXISTS (
+                           SELECT 1
+                           FROM batches b
+                           WHERE b.product_id = p.id
+                             AND b.quantity > 0
+                             AND b.expiry_date >= CURRENT_DATE
+                       ) THEN 'In Stock' ELSE 'Out of Stock' END AS stock_status,
                        price.mrp, price.discount_percent,
                        pd.description_uses, pd.side_effects_warnings,
                        pd.dosage_information, pd.storage_care,
@@ -209,13 +214,6 @@ class ProductRepository:
                 LEFT JOIN brands br ON br.id = p.brand_id
                 LEFT JOIN categories c ON c.id = p.category_id
                 LEFT JOIN product_details pd ON pd.product_id = p.id
-                LEFT JOIN LATERAL (
-                    SELECT SUM(b.quantity) AS available_quantity
-                    FROM batches b
-                    WHERE b.product_id = p.id
-                      AND b.quantity > 0
-                      AND b.expiry_date >= CURRENT_DATE
-                ) stock ON TRUE
                 LEFT JOIN LATERAL (
                     SELECT b.mrp, b.discount_percent
                     FROM batches b
