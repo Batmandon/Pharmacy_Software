@@ -1,7 +1,15 @@
 import logging
 import psycopg
-from fastapi import APIRouter, HTTPException, Response, Depends
-from auth import create_account, login_credentials, logout, get_current_user, get_profile, update_profile
+from fastapi import APIRouter, HTTPException, Request, Response, Depends
+from auth import (
+    create_account,
+    get_current_user,
+    get_profile,
+    login_credentials,
+    logout,
+    refresh_access_token,
+    update_profile,
+)
 from database import get_db
 from models.Authmodel import RegisterAccount, LoginCredentials, UpdateProfile
 
@@ -21,6 +29,14 @@ def login_user(userlogin: LoginCredentials, response: Response, conn=Depends(get
     if "error" in result:
         raise HTTPException(status_code=400, detail=result["error"])
     return result
+
+@router.post("/refresh_token")
+def refresh_user_token(request: Request, response: Response, conn=Depends(get_db)):
+    try:
+        return refresh_access_token(request, response, conn)
+    except psycopg.Error:
+        logger.exception("refresh_access_token failed")
+        raise HTTPException(status_code=500, detail="Could not refresh session.")
 
 # Profile routes. Validation done here:
 #   - get_current_user: no cookie / bad or expired token -> 401
