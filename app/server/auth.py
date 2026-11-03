@@ -1,5 +1,5 @@
 from models.Authmodel import RegisterAccount, LoginCredentials, UpdateProfile
-from database import get_db, get_db_connection
+from database import get_db
 from utils.utils import hash_password, verify_password
 from services.jwt import create_access_token, create_refresh_token, decode_token
 from fastapi import Response, Request, HTTPException, Depends
@@ -166,30 +166,30 @@ def get_user_info_from_request(request: Request):
         "role": payload.get("role")
     }
 
-def get_user_info_refresh_token (request: Request, response: Response):
+def refresh_access_token(request: Request, response: Response, conn):
     token = request.cookies.get("refresh_token")
-
     if not token:
-        return{"error": "Please Log IN"}
+        raise HTTPException(status_code=401, detail="Could not refresh session.")
 
-    payload = decode_token(token, "refresh")
-
-    if "error" in payload:
-        return payload
+    try:
+        payload = decode_token(token, "refresh")
+    except HTTPException as exc:
+        if exc.status_code == 401:
+            raise HTTPException(status_code=401, detail="Could not refresh session.") from exc
+        raise
 
     email = payload.get("sub")
-    with get_db_connection() as conn:
-        with conn.cursor() as cur:
-            user = get_user(
-                cur,
-                email,
-                ("email", "first_name", "last_name", "role"),
-            )
+    with conn.cursor() as cur:
+        user = get_user(
+            cur,
+            email,
+            ("email", "first_name", "last_name", "role"),
+        )
 
-            if not user:
-                return {"error": "user not found"}
+    if not user:
+        raise HTTPException(status_code=401, detail="Could not refresh session.")
 
-    access_token =  create_access_token({
+    access_token = create_access_token({
         "sub": user["email"],
         "name": user["first_name"] + " " + user["last_name"],
         "role": user["role"]
@@ -199,11 +199,11 @@ def get_user_info_refresh_token (request: Request, response: Response):
         key = "access_token",
         value = access_token,
         httponly = True,
-        secure = True,
-        samesite = "none",
+        secure = IS_PRODUCTION,
+        samesite = "none" if IS_PRODUCTION else "lax",
         max_age = 1800
-
     )
+    return {"message": "Session refreshed"}
 
 def logout(response: Response):
     response.delete_cookie(
