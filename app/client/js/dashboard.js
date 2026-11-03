@@ -19,6 +19,8 @@ const PATHS = {
   batches: "/batches",               // POST  |  PATCH /{id}  |  DELETE /{id}
   categories: "/categories",           // GET (list)  |  POST {name}
   manufacturers: "/manufacturers",     // GET (list)  |  POST {name}
+  brands: "/brands",                   // GET (list)  |  POST {name}
+  suppliers: "/suppliers",             // GET (list, admin only)
   salts: "/salts",                     // GET (list)  |  POST {name}
   saltStrengths: "/admin/products/salt-strengths", // GET  strengths already used with each salt (suggestions)
   orders: "/admin/orders",           // GET   ?status=&page=&page_size=   |   GET /{id}   |   PATCH /{id}/status
@@ -626,7 +628,7 @@ $("page-next").addEventListener("click", () => { productState.page += 1; loadPro
 
 // ---------- form helpers (shared by the product and batch dialogs) ----------
 const PRODUCT_FIELDS = [
-  "name", "category_id", "manufacturer_id", "form", "pack_size",
+  "name", "category_id", "manufacturer_id", "brand_id", "form", "pack_size",
   "schedule", "gst_percent", "hsn_code", "storage_condition", "description", "image_url",
 ];
 const BATCH_FIELDS = [
@@ -725,23 +727,29 @@ const saltList = $("salt-list");
 let productDialogState = { mode: "add", id: null, original: null };
 
 // ---------- lists behind the dropdowns (categories, manufacturers, salts, strengths already used) ----------
-const lookups = { categories: [], manufacturers: [], salts: [], strengths: new Map() };
-const LOOKUP_LABELS = { categories: "category", manufacturers: "manufacturer", salts: "salt" };
+const lookups = { categories: [], manufacturers: [], brands: [], suppliers: [], salts: [], strengths: new Map() };
+const LOOKUP_LABELS = { categories: "category", manufacturers: "manufacturer", brands: "brand", suppliers: "supplier", salts: "salt" };
+const NO_CHOICE_LABELS = { brands: "No brand", suppliers: "No supplier" }; // first option of an optional dropdown
 const byName = (a, b) => String(a.name).localeCompare(String(b.name), "en", { sensitivity: "base" });
 
 // loaded every time the dialog opens, so a salt added by someone else (or in the catalog) shows up
+const asList = (r) => (Array.isArray(r.value) ? r.value.filter((i) => i && i.id && i.name) : []).sort(byName);
+
 async function loadLookups() {
-  const [cats, mans, salts, strengths] = await Promise.allSettled([
+  const [cats, mans, brands, suppliers, salts, strengths] = await Promise.allSettled([
     request("GET", PATHS.categories, { allowArray: true }),
     request("GET", PATHS.manufacturers, { allowArray: true }),
+    request("GET", PATHS.brands, { allowArray: true }),
+    request("GET", PATHS.suppliers, { allowArray: true }),
     request("GET", PATHS.salts, { allowArray: true }),
     request("GET", PATHS.saltStrengths),
   ]);
-  for (const r of [cats, mans, salts]) if (r.status === "rejected") throw r.reason;
-  const list = (r) => (Array.isArray(r.value) ? r.value.filter((i) => i && i.id && i.name) : []).sort(byName);
-  lookups.categories = list(cats);
-  lookups.manufacturers = list(mans);
-  lookups.salts = list(salts);
+  for (const r of [cats, mans, brands, suppliers, salts]) if (r.status === "rejected") throw r.reason;
+  lookups.categories = asList(cats);
+  lookups.manufacturers = asList(mans);
+  lookups.brands = asList(brands);
+  lookups.suppliers = asList(suppliers);
+  lookups.salts = asList(salts);
   // suggestions are a nice-to-have: if they fail the strength box still works
   lookups.strengths = new Map(
     strengths.status === "fulfilled" ? toItems(strengths.value).map((i) => [i.salt_id, i.strengths || []]) : []
@@ -753,8 +761,14 @@ function optionWithValue(value) {
   o.value = value;
   return o;
 }
-function fillSelect(select, items, label) {
-  select.replaceChildren(new Option(`Select ${label}`, ""), ...items.map((i) => new Option(i.name, String(i.id))));
+function fillSelect(select, items, label, placeholder = `Select ${label}`) {
+  select.replaceChildren(new Option(placeholder, ""), ...items.map((i) => new Option(i.name, String(i.id))));
+}
+const fillSupplierSelect = (select) => fillSelect(select, lookups.suppliers, "supplier", "No supplier");
+
+// the batch dialog is opened on its own, so it loads just the suppliers
+async function loadSuppliers() {
+  lookups.suppliers = asList({ value: await request("GET", PATHS.suppliers, { allowArray: true }) });
 }
 const fillSaltOptions = () => $("salt-options").replaceChildren(...lookups.salts.map((s) => optionWithValue(s.name)));
 const saltByName = (name) => lookups.salts.find((s) => s.name.toLowerCase() === name.trim().toLowerCase());
@@ -806,7 +820,7 @@ function readSalts() {
   return { salts, error };
 }
 
-// ---------- small dialog: add a new category / manufacturer / salt ----------
+// ---------- small dialog: add a new category / manufacturer / brand / salt / supplier ----------
 const catalogDialog = $("catalog-dialog");
 const catalogForm = $("catalog-form");
 const catalogName = $("catalog-name");
@@ -820,6 +834,10 @@ function askNewItem(kind, prefill = "") {
   catalogResult = null;
   $("catalog-title").textContent = `New ${LOOKUP_LABELS[kind]}`;
   catalogName.value = prefill;
+  // a supplier also needs a phone number and a GSTIN
+  $("catalog-extra").hidden = kind !== "suppliers";
+  $("catalog-phone").value = "";
+  $("catalog-gstin").value = "";
   clearErrors(catalogForm);
   dialogMessage(catalogMsg, "");
   catalogDialog.showModal();
@@ -837,16 +855,29 @@ catalogForm.addEventListener("submit", async (e) => {
   if (!name) { setFieldError(catalogName, "Enter a name."); return; }
   if (name.length > 100) { setFieldError(catalogName, "Name can be at most 100 characters."); return; }
 
+  const body = { name };
+  if (catalogKind === "suppliers") {
+    const phone = $("catalog-phone").value.trim();
+    const gstin = $("catalog-gstin").value.trim().toUpperCase();
+    let bad = false;
+    if (!/^\+?\d[\d\s-]{5,18}$/.test(phone)) { setFieldError($("catalog-phone"), "Enter a valid phone number."); bad = true; }
+    if (!/^[0-9A-Z]{15}$/.test(gstin)) { setFieldError($("catalog-gstin"), "GSTIN must be 15 letters and digits."); bad = true; }
+    if (bad) return;
+    body.phone = phone;
+    body.gstin = gstin;
+  }
+
   const btn = $("catalog-save");
   btn.disabled = true;
   try {
-    const created = await request("POST", PATHS[catalogKind], { body: { name } });
+    const created = await request("POST", PATHS[catalogKind], { body });
     lookups[catalogKind] = [...lookups[catalogKind], created].sort(byName);
     catalogResult = created;
     catalogDialog.close();
   } catch (err) {
     if (err.redirecting) return;
-    dialogMessage(catalogMsg, /already exists/i.test(err.message)
+    // a supplier can clash on name, phone or GSTIN, and the server says which one
+    dialogMessage(catalogMsg, /already exists/i.test(err.message) && catalogKind !== "suppliers"
       ? `This ${LOOKUP_LABELS[catalogKind]} already exists. Pick it from the list.`
       : err.message);
   } finally {
@@ -854,8 +885,8 @@ catalogForm.addEventListener("submit", async (e) => {
   }
 });
 
-// the + buttons in the product dialog
-productForm.addEventListener("click", async (e) => {
+// the + buttons in the product dialog and in the batch dialog
+const onPlusClick = async (e) => {
   const btn = e.target.closest("[data-new], [data-action='new-salt']");
   if (!btn) return;
 
@@ -864,7 +895,7 @@ productForm.addEventListener("click", async (e) => {
     const select = btn.closest(".select-add").querySelector("select");
     const created = await askNewItem(kind);
     if (!created) return;
-    fillSelect(select, lookups[kind], LOOKUP_LABELS[kind]);
+    fillSelect(select, lookups[kind], LOOKUP_LABELS[kind], NO_CHOICE_LABELS[kind]);
     select.value = String(created.id);
     setFieldError(select, "");
   } else {
@@ -877,7 +908,9 @@ productForm.addEventListener("click", async (e) => {
     nameInput.classList.remove("invalid");
     updateStrengthOptions(row);
   }
-});
+};
+productForm.addEventListener("click", onPlusClick);
+$("batch-form").addEventListener("click", onPlusClick);
 
 async function openProductDialog(mode, product = null) {
   try {
@@ -888,6 +921,8 @@ async function openProductDialog(mode, product = null) {
   }
   fillSelect($("p-category"), lookups.categories, "category");
   fillSelect($("p-manufacturer"), lookups.manufacturers, "manufacturer");
+  fillSelect($("p-brand"), lookups.brands, "brand", "No brand");
+  fillSupplierSelect($("b-supplier"));
   fillSaltOptions();
 
   productDialogState = { mode, id: product ? product.id : null, original: product };
@@ -943,6 +978,7 @@ productForm.addEventListener("submit", async (e) => {
     ...values,
     category_id: Number(values.category_id),
     manufacturer_id: Number(values.manufacturer_id),
+    brand_id: values.brand_id ? Number(values.brand_id) : null,   // no brand -> null
     gst_percent: Number(values.gst_percent),
     salts,
   };
@@ -959,7 +995,9 @@ productForm.addEventListener("submit", async (e) => {
       // send only what changed
       const changes = {};
       PRODUCT_FIELDS.forEach((n) => {
-        const before = ["gst_percent", "category_id", "manufacturer_id"].includes(n) ? Number(original[n]) : (original[n] ?? "");
+        const before = n === "brand_id" ? (original.brand_id ?? null)
+          : ["gst_percent", "category_id", "manufacturer_id"].includes(n) ? Number(original[n])
+          : (original[n] ?? "");
         if (product[n] !== before) changes[n] = product[n];
       });
       const savedSalts = (original.salts || []).map((s) => ({ salt_id: s.salt_id, strength: s.strength ?? "" }));
@@ -1020,7 +1058,15 @@ let batchDialogState = { mode: "add", productId: null, batch: null };
 const batchToValues = (b) =>
   Object.fromEntries(BATCH_FIELDS.map((n) => [n, b[n] == null ? "" : String(b[n])]));
 
-function openBatchDialog(mode, productId, batch = null) {
+async function openBatchDialog(mode, productId, batch = null) {
+  try {
+    await loadSuppliers();
+  } catch (err) {
+    if (!err.redirecting) showToast(`Could not load the supplier list. ${err.message}`);
+    return;
+  }
+  fillSupplierSelect($("bd-supplier"));
+
   batchDialogState = { mode, productId, batch };
   const product = productCache.get(productId);
   $("batch-dialog-title").textContent =
