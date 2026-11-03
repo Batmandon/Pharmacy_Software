@@ -98,13 +98,14 @@ class ProductRepository:
         with self.conn.cursor() as cur:
             cur.execute(
                 """
-                INSERT INTO products (category_id, manufacturer_id, name, form, pack_size, schedule, gst_percent, hsn_code, storage_condition, description, image_url, signature)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                INSERT INTO products (category_id, manufacturer_id, brand_id, name, form, pack_size, schedule, gst_percent, hsn_code, storage_condition, description, image_url, signature)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING id
                 """,
                 (
                     product.category_id,
                     product.manufacturer_id,
+                    product.brand_id,
                     product.name,
                     product.form,
                     product.pack_size,
