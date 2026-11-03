@@ -32,6 +32,7 @@ class AddProduct(BaseModel):
     form: FormType
     pack_size: str = Field(max_length=20)
     manufacturer_id: int = Field(gt=0)
+    brand_id: Optional[int] = Field(default=None, gt=0)   # generic medicines have no brand
     schedule: ScheduleType
     gst_percent: float = Field(ge=0, le=99.99)
     hsn_code: str = Field(max_length=20)
@@ -55,6 +56,7 @@ class UpdateProduct(BaseModel):
     form: Optional[FormType] = None
     pack_size: Optional[str] = Field(default=None, max_length=20)
     manufacturer_id: Optional[int] = Field(default=None, gt=0)
+    brand_id: Optional[int] = Field(default=None, gt=0)   # sending null removes the brand
     schedule: Optional[ScheduleType] = None
     gst_percent: Optional[float] = Field(default=None, ge=0, le=99.99)
     hsn_code: Optional[str] = Field(default=None, max_length=20)
