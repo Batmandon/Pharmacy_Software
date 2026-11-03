@@ -219,6 +219,15 @@ a { color: inherit; text-decoration: none; }
 }
 .btn-cart:hover { background: var(--teal); color: #fff; }
 
+.cart-message {
+  margin: 10px 0 0;
+  color: var(--teal-dark);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+.cart-message.is-error { color: #b42318; }
+.cart-message a { color: inherit; font-weight: 600; }
+
 /* Out of stock state */
 .card.is-out .card-img img { filter: grayscale(1); opacity: 0.55; }
 .card.is-out:hover { transform: none; box-shadow: none; }
