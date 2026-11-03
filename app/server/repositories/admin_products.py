@@ -96,7 +96,7 @@ class AdminProductRepository:
                 f"""
                 SELECT p.id, p.name, {strength_label("p")} AS strength, p.form, p.pack_size, p.schedule,
                        p.gst_percent, p.hsn_code, p.storage_condition, p.description,
-                       p.image_url, p.is_active, p.category_id, p.manufacturer_id,
+                       p.image_url, p.is_active, p.category_id, p.manufacturer_id, p.brand_id,
                        c.name AS category, m.name AS manufacturer,
                        COALESCE(
                            (
