@@ -24,7 +24,8 @@ window.fetch = async (input, init) => {
     return originalFetch(input, init);
   }
 
-  const request = new Request(input, { ...init, credentials: "include" });
+  const { allowUnauthorizedResponse = false, ...requestInit } = init || {};
+  const request = new Request(input, { ...requestInit, credentials: "include" });
   const response = await originalFetch(request.clone());
   if (response.status !== 401 || url.href === refreshUrl.href) {
     return response;
@@ -46,12 +47,14 @@ window.fetch = async (input, init) => {
   }
 
   if (!refreshed) {
-    redirectToLogin();
+    if (!allowUnauthorizedResponse) {
+      redirectToLogin();
+    }
     return response;
   }
 
   const retryResponse = await originalFetch(request.clone());
-  if (retryResponse.status === 401) {
+  if (retryResponse.status === 401 && !allowUnauthorizedResponse) {
     redirectToLogin();
   }
   return retryResponse;
