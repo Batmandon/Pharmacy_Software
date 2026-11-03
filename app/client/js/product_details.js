@@ -38,9 +38,7 @@
       && Number(product.id) === productId
       && typeof product.name === "string"
       && product.name.trim().length > 0
-      && typeof product.in_stock === "boolean"
-      && Number.isInteger(Number(product.available_quantity))
-      && Number(product.available_quantity) >= 0
+      && ["In Stock", "Out of Stock"].includes(product.stock_status)
       && (product.price === null || getAmount(product.price) !== null)
       && isOptionalText(product.brand)
       && isOptionalText(product.category)
@@ -90,6 +88,25 @@
     element.textContent = value || fallback;
   }
 
+  function showLoginOptions() {
+    actionMessage.replaceChildren(
+      document.createTextNode("Please log in or create an account to add items to your cart. "),
+    );
+    const loginLink = document.createElement("a");
+    loginLink.href = "login.html";
+    loginLink.textContent = "Log in";
+    const registerLink = document.createElement("a");
+    registerLink.href = "register.html";
+    registerLink.textContent = "Register";
+    actionMessage.append(
+      loginLink,
+      document.createTextNode(" or "),
+      registerLink,
+      document.createTextNode("."),
+    );
+    actionMessage.classList.add("is-error");
+  }
+
   function renderProduct(product) {
     productDetails = product;
     document.title = `${product.name} | Shama Medical`;
@@ -112,12 +129,11 @@
     const stockBadge = document.getElementById("product-stock");
     stockBadge.replaceChildren();
     const stockIcon = document.createElement("i");
-    stockIcon.className = product.in_stock ? "fa-solid fa-check" : "fa-solid fa-xmark";
+    const inStock = product.stock_status === "In Stock";
+    stockIcon.className = inStock ? "fa-solid fa-check" : "fa-solid fa-xmark";
     stockIcon.setAttribute("aria-hidden", "true");
-    stockBadge.append(stockIcon, document.createTextNode(
-      product.in_stock ? ` In Stock (${product.available_quantity})` : " Out of Stock",
-    ));
-    stockBadge.classList.toggle("out-of-stock", !product.in_stock);
+    stockBadge.append(stockIcon, document.createTextNode(` ${product.stock_status}`));
+    stockBadge.classList.toggle("out-of-stock", !inStock);
 
     const imageUrl = getSafeImageUrl(product.image_url);
     image.hidden = !imageUrl;
@@ -147,7 +163,7 @@
       badges.append(badge);
     }
 
-    const canOrderOnline = product.in_stock && product.schedule === "OTC";
+    const canOrderOnline = inStock && product.schedule === "OTC";
     addToCartButton.disabled = !canOrderOnline;
     addToCartButton.dataset.productId = String(product.id);
     wrapper.querySelectorAll("[data-quantity-change]").forEach((button) => {
@@ -224,7 +240,7 @@
       const quantityInput = document.getElementById("product-quantity");
       const currentQuantity = Number(quantityInput.value);
       const nextQuantity = currentQuantity + Number(quantityButton.dataset.quantityChange);
-      const maximum = Math.min(productDetails.available_quantity, 20);
+      const maximum = 20;
       quantityInput.value = String(Math.max(1, Math.min(nextQuantity, maximum)));
       return;
     }
@@ -247,11 +263,16 @@
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
+        allowUnauthorizedResponse: true,
         body: JSON.stringify({
           product_id: productDetails.id,
           quantity,
         }),
       });
+      if (response.status === 401) {
+        showLoginOptions();
+        return;
+      }
       const result = await readResponse(response);
       actionMessage.textContent = result.message || "Added to cart.";
     } catch (error) {
@@ -259,7 +280,9 @@
       actionMessage.textContent = error.message || "Could not add item to cart.";
       actionMessage.classList.add("is-error");
     } finally {
-      addButton.disabled = !(productDetails.in_stock && productDetails.schedule === "OTC");
+      addButton.disabled = !(
+        productDetails.stock_status === "In Stock" && productDetails.schedule === "OTC"
+      );
     }
   });
 
