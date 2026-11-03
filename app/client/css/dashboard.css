@@ -33,7 +33,7 @@ button { cursor: pointer; }
 /* ---------- Layout ---------- */
 .admin {
   display: grid;
-  grid-template-columns: 240px 1fr;
+  grid-template-columns:  270px 1fr;
   min-height: 100vh;
 }
 
@@ -69,7 +69,7 @@ button { cursor: pointer; }
 .nav-bottom { margin-top: auto; display: grid; gap: 6px; }
 a.nav-item { text-decoration: none; }
 
-.main { padding: 28px 28px 60px; min-width: 0; max-width: 1200px; width: 100%; }
+.main { padding: 28px 28px 60px; min-width: 0; max-width: 100vw; }
 .topbar { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; margin-bottom: 22px; }
 .topbar h1 { font-size: 1.7rem; }
 
@@ -241,9 +241,9 @@ legend { padding: 0 8px; font-weight: 600; font-size: 0.9rem; color: var(--teal-
 .tag-expired { background: #fee2e2; color: #b91c1c; }
 
 /* ---------- Alerts (overview) ---------- */
-.alerts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 14px; align-items: start; }
+.alerts { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; margin-top: 14px; align-items: stretch; }
 .alerts .card { margin-top: 0; min-width: 0; }
-.scroll-box { max-height: 340px; overflow-y: auto; }
+.scroll-box { max-height: 520px; overflow-y: auto; }
 .alerts .link-btn { font-weight: 600; text-align: left; }
 .tag-critical { background: #fee2e2; color: #b91c1c; }
 .tag-warning  { background: #ffedd5; color: #c2410c; }
@@ -273,10 +273,6 @@ legend { padding: 0 8px; font-weight: 600; font-size: 0.9rem; color: var(--teal-
 .table .link-btn { padding: 0; }
 
 /* ---------- Responsive ---------- */
-@media (max-width: 1100px) {
-  .alerts { grid-template-columns: 1fr; }
-}
-
 @media (max-width: 900px) {
   .admin { grid-template-columns: 1fr; }
   .sidebar {
@@ -287,7 +283,7 @@ legend { padding: 0 8px; font-weight: 600; font-size: 0.9rem; color: var(--teal-
   .nav-item { padding: 9px 12px; }
   .nav-bottom { margin-top: 0; margin-left: auto; grid-auto-flow: column; }
   .nav-bottom .nav-item { width: auto; }
-  .main { padding: 20px 16px 60px; }
+  .main { padding: 20px 16px 60px; max-width: 100vw; }
   .tiles { grid-template-columns: repeat(2, 1fr); }
 }
 

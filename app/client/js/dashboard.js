@@ -6,7 +6,7 @@ const CONFIG = {
   PAGE_SIZE: 20,
   RECENT_ORDERS: 10,   // rows in the "Recent orders" card on the overview
   SEARCH_DELAY: 350,   // ms to wait after typing before searching products
-  ALERT_PAGE_SIZE: 5,  // rows per page in the expiry cards on the overview
+  ALERT_PAGE_SIZE: 5, // rows per page in the expiry cards on the overview
   EXPIRY_DAYS: 90,     // "expiring soon" window
 };
 
