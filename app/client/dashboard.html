@@ -405,11 +405,18 @@
             </div><small class="error"></small></div>
         </div>
 
-        <div class="field"><label for="p-manufacturer">Manufacturer</label>
-          <div class="select-add">
-            <select id="p-manufacturer" name="manufacturer_id" class="input"></select>
-            <button type="button" class="icon-btn" data-new="manufacturers" aria-label="Add a new manufacturer" title="Add a new manufacturer"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
-          </div><small class="error"></small></div>
+        <div class="grid-2">
+          <div class="field"><label for="p-manufacturer">Manufacturer</label>
+            <div class="select-add">
+              <select id="p-manufacturer" name="manufacturer_id" class="input"></select>
+              <button type="button" class="icon-btn" data-new="manufacturers" aria-label="Add a new manufacturer" title="Add a new manufacturer"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
+            </div><small class="error"></small></div>
+          <div class="field"><label for="p-brand">Brand <span class="opt">(optional)</span></label>
+            <div class="select-add">
+              <select id="p-brand" name="brand_id" class="input"></select>
+              <button type="button" class="icon-btn" data-new="brands" aria-label="Add a new brand" title="Add a new brand"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
+            </div><small class="error"></small></div>
+        </div>
 
         <div class="grid-3">
           <div class="field"><label for="p-form">Form</label>
@@ -479,8 +486,11 @@
         </div>
 
         <div class="grid-2">
-          <div class="field"><label for="b-supplier">Supplier ID <span class="opt">(optional)</span></label>
-            <input type="number" id="b-supplier" name="supplier_id" class="input" min="1" step="1"><small class="error"></small></div>
+          <div class="field"><label for="b-supplier">Supplier <span class="opt">(optional)</span></label>
+            <div class="select-add">
+              <select id="b-supplier" name="supplier_id" class="input"></select>
+              <button type="button" class="icon-btn" data-new="suppliers" aria-label="Add a new supplier" title="Add a new supplier"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
+            </div><small class="error"></small></div>
           <div class="field"><label for="b-rack">Rack location <span class="opt">(optional)</span></label>
             <input type="text" id="b-rack" name="rack_location" class="input" maxlength="100"><small class="error"></small></div>
         </div>
@@ -500,6 +510,12 @@
       <div id="catalog-message" class="form-message" role="alert"></div>
       <div class="field"><label for="catalog-name">Name</label>
         <input type="text" id="catalog-name" class="input" maxlength="100" autocomplete="off"><small class="error"></small></div>
+      <div id="catalog-extra" hidden>
+        <div class="field"><label for="catalog-phone">Phone</label>
+          <input type="tel" id="catalog-phone" class="input" maxlength="20" autocomplete="off"><small class="error"></small></div>
+        <div class="field"><label for="catalog-gstin">GSTIN</label>
+          <input type="text" id="catalog-gstin" class="input" maxlength="15" placeholder="15 letters and digits" autocomplete="off"><small class="error"></small></div>
+      </div>
       <div class="dialog-actions">
         <button type="button" class="btn btn-ghost" data-close>Cancel</button>
         <button type="submit" class="btn btn-primary" id="catalog-save">Save</button>
@@ -541,8 +557,11 @@
       </div>
 
       <div class="grid-2">
-        <div class="field"><label for="bd-supplier">Supplier ID <span class="opt">(optional)</span></label>
-          <input type="number" id="bd-supplier" name="supplier_id" class="input" min="1" step="1"><small class="error"></small></div>
+        <div class="field"><label for="bd-supplier">Supplier <span class="opt">(optional)</span></label>
+          <div class="select-add">
+            <select id="bd-supplier" name="supplier_id" class="input"></select>
+            <button type="button" class="icon-btn" data-new="suppliers" aria-label="Add a new supplier" title="Add a new supplier"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
+          </div><small class="error"></small></div>
         <div class="field"><label for="bd-rack">Rack location <span class="opt">(optional)</span></label>
           <input type="text" id="bd-rack" name="rack_location" class="input" maxlength="100"><small class="error"></small></div>
       </div>
