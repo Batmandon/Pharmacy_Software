@@ -27,7 +27,7 @@ frontend/
     js/
   components/              Shared navbar and footer
 backend/
-  .env                     Local configuration (not committed)
+  .env                     
   app/
     main.py
     api/routers/
