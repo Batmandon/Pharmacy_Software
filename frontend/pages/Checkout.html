@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Shama Medical Store – Checkout</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../assets/css/components.css">
+    <link rel="stylesheet" href="../assets/css/checkout.css">
+</head>
+
+<body>
+    <header>
+        <div class="bar">
+            <a href="index.html" class="nav-logo" aria-label="Home">
+                <div class="logo-icon">
+                    <i class="fa-solid fa-plus"></i>
+                </div>
+                <span class="logo-text">Shama<span>Medical</span></span>
+            </a>
+        </div>
+    </header>
+
+    <main>
+        <div class="top">
+            <h1>Checkout</h1>
+            <div class="crumbs">Cart <span>›</span> <b>Payment</b> <span>›</span> Confirmation</div>
+        </div>
+
+        <div class="grid">
+            <section>
+                <div class="card">
+                    <h2>How do you want to get it?</h2>
+                    <div class="seg" id="fulfillment-options" role="group" aria-label="Fulfillment">
+                        <button type="button" aria-pressed="false" data-fulfillment="pickup">In-store pickup</button>
+                        <button type="button" aria-pressed="true" data-fulfillment="delivery">Home delivery</button>
+                    </div>
+                    <div class="addr" id="checkout-address" data-address-id="">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z" />
+                            <circle cx="12" cy="10" r="2.5" />
+                        </svg>
+                        <div class="address-content">
+                            <b id="atitle">Deliver to</b>
+                            <small id="atext">Loading saved addresses...</small>
+                            <label class="address-picker-label" for="delivery-address-select" hidden>Choose a delivery address</label>
+                            <select id="delivery-address-select" class="address-picker" aria-label="Delivery address" hidden></select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>Payment method</h2>
+
+                    <label class="pay"><input type="radio" name="pm" value="cod" checked>
+                        <div class="row"><span class="dot"></span><strong>Cash / card on delivery</strong></div>
+                        <p class="note">Pay the courier when your order arrives.</p>
+                    </label>
+                </div>
+            </section>
+
+            <aside id="sum">
+                <div class="card" style="margin:0">
+                    <button class="sumtoggle" type="button" aria-expanded="false" id="tg"><span id="mobile-summary-title">Order summary</span><em id="tgl">Show</em></button>
+                    <h2 class="desk" id="desktop-summary-title">Order summary</h2>
+                    <div class="sumbody">
+                        <div id="cart-items"></div>
+                        <p class="cart-empty" id="cart-message" role="status">Loading your cart...</p>
+                        <div class="sum"><span>Subtotal</span><span data-summary="subtotal">₹0.00</span></div>
+                        <div class="sum"><span>Delivery</span><span data-summary="delivery">₹0.00</span></div>
+                        <div class="sum"><span>Estimated tax</span><span data-summary="tax">₹0.00</span></div>
+                        <div class="total"><span>Total</span><span data-summary="total">₹0.00</span></div>
+                        <button class="cta desk" type="button" data-order disabled>Place order</button>
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </main>
+
+    <div class="mbar">
+        <div><small>Total</small><b data-summary="mobile-total">₹0.00</b></div>
+        <button class="cta" type="button" data-order disabled>Place order</button>
+    </div>
+    <div class="toast" id="t" role="status"></div>
+
+    <script src="../assets/js/config.js"></script>
+    <script src="../assets/js/orders.js"></script>
+</body>
+
+</html>

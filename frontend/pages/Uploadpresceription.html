@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Prescription</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../assets/css/components.css">
+    <link rel="stylesheet" href="../assets/css/upload.css">
+</head>
+
+<body>
+    <div id="navbar-placeholder"></div>
+
+
+    <main>
+        <!-- Upload Prescription Header Banner -->
+        <section class="rx-header-banner">
+            <div class="rx-header-container">
+                <!-- Main Title -->
+                <h1 class="rx-main-heading">Upload Your Prescription</h1>
+
+                <!-- Subtitle Paragraph -->
+                <p class="rx-subtext">
+                    Quickly get your medicines by uploading a photo or scan of your doctor's prescription.
+                </p>
+
+                <!-- 3 Steps Process Bar -->
+                <div class="rx-steps-bar">
+                    <span class="rx-step active-step">1. Upload Prescription</span>
+                    <i class="fa-solid fa-arrow-right rx-step-arrow"></i>
+                    <span class="rx-step">2. Pharmacist Reviews</span>
+                    <i class="fa-solid fa-arrow-right rx-step-arrow"></i>
+                    <span class="rx-step">3. Delivery or Pickup</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Prescription Form & Upload Details Section -->
+        <section class="rx-upload-section">
+            <div class="rx-upload-container">
+
+                <!-- Left Column: Upload Dropzone & File Card -->
+                <div class="rx-upload-column">
+
+                    <!-- Div A: Drag and Drop Upload Zone -->
+                    <div class="rx-dropzone">
+                        <div class="rx-dropzone-icon">
+                            <i class="fa-solid fa-cloud-arrow-up"></i>
+                        </div>
+                        <p class="rx-dropzone-text">
+                            Drag and drop your prescription here or
+                            <label for="rx-file-input" class="rx-browse-link">Browse files</label>
+                        </p>
+                        <span class="rx-dropzone-hint">(Supports JPG, PNG, PDF)</span>
+                        <input type="file" id="rx-file-input" accept=".jpg,.jpeg,.png,.pdf" hidden>
+                    </div>
+
+                    <!-- Div B: Uploaded File Item Preview -->
+                    <div class="rx-file-item">
+                        <div class="rx-file-info">
+                            <div class="rx-file-thumb">
+                                <i class="fa-solid fa-file-prescription"></i>
+                            </div>
+                            <span class="rx-file-name">rx_scanned_oct2026.jpg</span>
+                        </div>
+
+                        <div class="rx-file-actions">
+                            <span class="rx-status-check" title="Uploaded successfully">
+                                <i class="fa-solid fa-circle-check"></i>
+                            </span>
+                            <button class="rx-btn-delete" aria-label="Delete file">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Right Column: Details Form -->
+                <div class="rx-form-column">
+                    <h2 class="rx-form-title">Enter Your Details</h2>
+
+                    <form class="rx-form">
+
+                        <!-- Patient Name -->
+                        <div class="form-group">
+                            <label for="patient-name">Patient's Full Name</label>
+                            <input type="text" id="patient-name" class="form-input" placeholder="Patient's Full Name"
+                                required>
+                        </div>
+
+                        <!-- Contact Number -->
+                        <div class="form-group">
+                            <label for="contact-number">Contact Number</label>
+                            <input type="tel" id="contact-number" class="form-input" placeholder="Contact Number"
+                                required>
+                        </div>
+
+                        <!-- Delivery Preference Options (Custom Radio Selector) -->
+                        <div class="form-group">
+                            <label>Delivery Preference</label>
+                            <div class="delivery-options-grid">
+                                <label class="delivery-option-card active-option">
+                                    <input type="radio" name="delivery_preference" value="home" checked hidden>
+                                    <i class="fa-solid fa-house-medical"></i>
+                                    <span>Home Delivery</span>
+                                </label>
+
+                                <label class="delivery-option-card">
+                                    <input type="radio" name="delivery_preference" value="pickup" hidden>
+                                    <i class="fa-solid fa-store"></i>
+                                    <span>In-Store Pickup</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Notes for Pharmacist -->
+                        <div class="form-group">
+                            <label for="pharmacist-notes">Special Notes for the Pharmacist</label>
+                            <textarea id="pharmacist-notes" class="form-textarea" rows="3"
+                                placeholder="e.g., request generic alternatives, or mention if specific brands are needed"></textarea>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <button type="submit" class="rx-submit-btn">
+                            Submit Prescription
+                        </button>
+
+                        <!-- Security & Verification Badge -->
+                        <div class="rx-security-badge">
+                            <span><i class="fa-solid fa-lock"></i> HIPAA Compliant &amp; Secure</span>
+                            <span class="rx-badge-divider">|</span>
+                            <span>Verified by Licensed Pharmacists</span>
+                        </div>
+
+                    </form>
+                </div>
+
+            </div>
+        </section>
+    </main>
+    <div id="footer-placeholder"></div>
+    <script src="../assets/js/config.js" defer></script>
+    <script src="../assets/js/components.js" defer></script>
+</body>
+
+</html>

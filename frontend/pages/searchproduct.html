@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Search Products | Shama Medical</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="../assets/css/products.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+</head>
+<body>
+
+  <!-- Navbar component goes here -->
+    <div id="navbar-placeholder"></div>
+
+  <main class="page">
+    <div class="page-head">
+      <h1 id="page-title">Products</h1>
+      <p id="result-text" aria-live="polite">Loading products...</p>
+    </div>
+
+    <section class="product-grid" id="product-grid" aria-live="polite"></section>
+
+    <!-- Empty state: shown by search.js when there are no products -->
+    <section class="empty-state" id="empty-state" hidden>
+      <div class="empty-icon"><i class="fa-solid fa-magnifying-glass"></i></div>
+      <h2>No products found</h2>
+      <p>We couldn't find anything matching your search. Check the spelling or try a different keyword.</p>
+      <a href="index.html" class="btn-primary">Back to Home</a>
+    </section>
+
+    <nav class="pagination" id="pagination" aria-label="Pagination" hidden></nav>
+  </main>
+
+  <div id="footer-placeholder"></div>
+  <script src="../assets/js/config.js" defer></script>
+  <script src="../assets/js/components.js" defer></script>
+  <script src="../assets/js/search.js" defer></script>
+</body>
+</html>

@@ -7,11 +7,11 @@ venv/
 **/.venv/
 __pycache__/
 **/__pycache__/
-app/server/uploads/
+backend/app/uploads/
 *.py[cod]
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
 readme.md
-app/server/routers/postman/
-app/server/routers/.postman/
+api-docs/postman/
+api-docs/.postman/

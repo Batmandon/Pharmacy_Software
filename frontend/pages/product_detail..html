@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product details | Shama Medical</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../assets/css/components.css">
+    <link rel="stylesheet" href="../assets/css/product_detail.css">
+</head>
+
+<body>
+    <div id="navbar-placeholder"></div>
+
+
+    <!-- Breadcrumb Navigation -->
+    <div class="breadcrumb-container">
+        <nav class="breadcrumb">
+            <a href="index.html">Home</a> <i class="fa-solid fa-chevron-right"></i>
+            <a href="product.html">Shop</a> <i class="fa-solid fa-chevron-right"></i>
+            <a href="product.html" id="breadcrumb-category">Shop</a> <i class="fa-solid fa-chevron-right"></i>
+            <span id="breadcrumb-product-name">Product details</span>
+        </nav>
+    </div>
+
+    <!-- Main Product Layout Grid (2 Columns, 2 Rows) -->
+    <div class="pdp-wrapper">
+
+        <aside class="pdp-gallery-aside">
+            <div class="main-image-box">
+                <img id="mainProductImg" alt="" hidden>
+                <p id="product-loading" role="status">Loading product details...</p>
+            </div>
+        </aside>
+
+        <main class="pdp-details-main">
+            <div class="pdp-header-bar">
+                <h1 class="pdp-title" id="product-name">Product details</h1>
+                <div class="pdp-meta-top">
+                    <span class="pdp-stock-badge" id="product-stock"></span>
+                </div>
+            </div>
+
+            <p class="pdp-brand-info" id="product-meta"></p>
+
+            <div class="pdp-price" id="product-price"></div>
+
+            <p class="pdp-description" id="product-description"></p>
+
+            <div class="pdp-action-row">
+                <div class="qty-counter">
+                    <button type="button" class="qty-btn" data-quantity-change="-1" aria-label="Decrease quantity">-</button>
+                    <input type="text" value="1" readonly class="qty-input" id="product-quantity" aria-label="Quantity">
+                    <button type="button" class="qty-btn" data-quantity-change="1" aria-label="Increase quantity">+</button>
+                </div>
+                <button class="btn-add-to-cart" id="add-to-cart" type="button" disabled>
+                    <i class="fa-solid fa-cart-shopping"></i> Add to Cart
+                </button>
+            </div>
+            <p class="product-action-message" id="product-action-message" role="status" aria-live="polite"></p>
+
+            <div class="pdp-badges-row" id="product-badges"></div>
+
+        </main>
+
+        <section class="pdp-tab-section">
+            <div class="tab-headers" id="product-detail-tabs" role="tablist" aria-label="Product information">
+                <button class="tab-header-item active-hover-tab" type="button" role="tab" aria-selected="true" data-detail-tab="description_uses">
+                    <span>Description &amp; Uses</span>
+                </button>
+                <button class="tab-header-item" type="button" role="tab" aria-selected="false" data-detail-tab="side_effects_warnings">
+                    <span>Side Effects &amp; Warnings</span>
+                </button>
+                <button class="tab-header-item" type="button" role="tab" aria-selected="false" data-detail-tab="dosage_information">
+                    <span>Dosage Information</span>
+                </button>
+                <button class="tab-header-item" type="button" role="tab" aria-selected="false" data-detail-tab="storage_care">
+                    <span>Storage &amp; Care</span>
+                </button>
+            </div>
+
+            <div class="tab-content-container" id="product-detail-content" role="tabpanel" aria-live="polite">
+                <p id="detail-loading" role="status">Loading product information...</p>
+            </div>
+        </section>
+
+    </div>
+    <div id="footer-placeholder"></div>
+    <script src="../assets/js/config.js" defer></script>
+    <script src="../assets/js/components.js" defer></script>
+    <script src="../assets/js/product_details.js" defer></script>
+</body>
+
+</html>
