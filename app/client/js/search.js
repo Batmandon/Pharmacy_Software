@@ -145,6 +145,7 @@ function renderProduct(product) {
       ${product.requires_prescription
         ? ""
         : '<button class="btn-cart" type="button"><i class="fa-solid fa-cart-plus"></i> Add to Cart</button>'}
+      ${product.requires_prescription ? "" : '<p class="cart-message" role="status" aria-live="polite" hidden></p>'}
     </div>
   </article>`;
 }
@@ -206,6 +207,77 @@ function showError(error) {
     "Please check your connection and try again later.";
   resultText.textContent = "There was a problem loading products.";
 }
+
+function showCartMessage(element, message, isError = false) {
+  element.replaceChildren(document.createTextNode(message));
+  element.classList.toggle("is-error", isError);
+  element.hidden = false;
+}
+
+function showLoginOptions(element) {
+  element.replaceChildren(
+    document.createTextNode("Please log in or create an account to add items to your cart. "),
+  );
+  const loginLink = document.createElement("a");
+  loginLink.href = "login.html";
+  loginLink.textContent = "Log in";
+  const registerLink = document.createElement("a");
+  registerLink.href = "register.html";
+  registerLink.textContent = "Register";
+  element.append(loginLink, document.createTextNode(" or "), registerLink, document.createTextNode("."));
+  element.classList.add("is-error");
+  element.hidden = false;
+}
+
+grid.addEventListener("click", async (event) => {
+  if (!(event.target instanceof Element)) {
+    return;
+  }
+  const button = event.target.closest(".btn-cart");
+  if (!button || !grid.contains(button)) {
+    return;
+  }
+
+  const card = button.closest("[data-product-id]");
+  const message = card?.querySelector(".cart-message");
+  const productId = Number(card?.dataset.productId);
+  const apiBaseUrl = window.APP_CONFIG?.API_BASE_URL;
+  if (!message || !Number.isSafeInteger(productId) || productId <= 0 || !apiBaseUrl) {
+    return;
+  }
+
+  button.disabled = true;
+  showCartMessage(message, "Adding item to your cart...");
+  try {
+    const response = await fetch(`${apiBaseUrl}/orders/items`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      allowUnauthorizedResponse: true,
+      body: JSON.stringify({ product_id: productId, quantity: 1 }),
+    });
+    const body = await response.json().catch(() => ({}));
+
+    if (response.status === 401) {
+      showLoginOptions(message);
+      return;
+    }
+    if (!response.ok) {
+      const errorMessage = typeof body.detail === "string"
+        ? body.detail
+        : "Could not add this product to your cart. Please try again.";
+      showCartMessage(message, errorMessage, true);
+      return;
+    }
+
+    showCartMessage(message, body.message || "Item added to your cart.");
+  } catch (error) {
+    console.error("Could not add search product to cart:", error);
+    showCartMessage(message, "Could not reach the server. Please try again.", true);
+  } finally {
+    button.disabled = false;
+  }
+});
 
 async function loadProducts() {
   const apiBaseUrl = window.APP_CONFIG?.API_BASE_URL;
