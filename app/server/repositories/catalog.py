@@ -65,10 +65,7 @@ class CatalogRepository:
 
             duplicate = self._find_duplicate(cur, entity, values)
             if duplicate:
-                return {
-                    "error": "A record with these unique value(s) already exists.",
-                    "status_code": 409,
-                }
+                return self._duplicate_error(entity, duplicate)
 
             columns = tuple(values)
             cur.execute(
@@ -109,10 +106,7 @@ class CatalogRepository:
 
             duplicate = self._find_duplicate(cur, entity, updated, excluding_id=item_id)
             if duplicate:
-                return {
-                    "error": "A record with these unique value(s) already exists.",
-                    "status_code": 409,
-                }
+                return self._duplicate_error(entity, duplicate)
 
             columns = tuple(changes)
             cur.execute(
@@ -172,8 +166,15 @@ class CatalogRepository:
                 tuple(params),
             )
             if cur.fetchone() is not None:
-                return True
-        return False
+                return columns   # which unique value clashed, e.g. ("phone",)
+        return None
+
+    @staticmethod
+    def _duplicate_error(entity: CatalogEntity, columns):
+        return {
+            "error": f"A {ENTITY_LABELS[entity]} with this {' and '.join(columns)} already exists.",
+            "status_code": 409,
+        }
 
     @staticmethod
     def _check_references(cur, entity: CatalogEntity, values: dict):
