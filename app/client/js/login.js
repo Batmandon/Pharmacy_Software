@@ -3,6 +3,7 @@ const message = document.getElementById("login-message");
 const email = document.getElementById("email");
 const password = document.getElementById("password");
 const submitButton = form.querySelector('button[type="submit"]');
+let loginSubmitted = false;
 
 function showMessage(text, type) {
   message.textContent = text;
@@ -26,6 +27,26 @@ function getErrorMessage(body, status) {
   return `Login failed (HTTP ${status}). Please try again.`;
 }
 
+async function refreshSession() {
+  try {
+    const response = await fetch(`${window.APP_CONFIG.API_BASE_URL}/auth_routes/refresh_token`, {
+      method: "POST",
+      credentials: "include",
+    });
+
+    if (!response.ok && !loginSubmitted) {
+      showMessage("Your session could not be refreshed. Please log in.", "error");
+    }
+  } catch (error) {
+    if (!loginSubmitted) {
+      showMessage("Your session could not be refreshed. Please log in.", "error");
+    }
+    console.error("Session refresh request failed:", error);
+  }
+}
+
+refreshSession();
+
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
   email.value = email.value.trim();
@@ -34,6 +55,7 @@ form.addEventListener("submit", async (event) => {
     return;
   }
 
+  loginSubmitted = true;
   submitButton.disabled = true;
   showMessage("Logging in…", "success");
 
