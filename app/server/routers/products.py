@@ -14,6 +14,7 @@ from models.ProductWithBatch_model import ProductWithBatch, UpdateProductWithBat
 FK_MESSAGES = {
     "products_category_id_fkey": "That category does not exist.",
     "products_manufacturer_id_fkey": "That manufacturer does not exist.",
+    "products_brand_id_fkey": "That brand does not exist.",
     "product_salts_salt_id_fkey": "One of the salts does not exist.",
     "batches_supplier_id_fkey": "That supplier does not exist.",
 }
