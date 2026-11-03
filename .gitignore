@@ -12,6 +12,5 @@ backend/app/uploads/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
-readme.md
 api-docs/postman/
 api-docs/.postman/
