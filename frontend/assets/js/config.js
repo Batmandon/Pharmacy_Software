@@ -1,5 +1,11 @@
+// Where the frontend finds the API.
+//  - on your computer: the API runs on port 8000 of the same host as the page
+//    (same host keeps the Lax login cookie working: use 127.0.0.1 for both or localhost for both)
+//  - deployed: "/api" on the same domain; vercel.json forwards it to the Render backend
+const isLocal = ["localhost", "127.0.0.1"].includes(window.location.hostname);
+
 window.APP_CONFIG = {
-  API_BASE_URL: "http://127.0.0.1:8000",
+  API_BASE_URL: isLocal ? `http://${window.location.hostname}:8000` : "/api",
 };
 
 const apiBaseUrl = new URL(window.APP_CONFIG.API_BASE_URL, window.location.href);
