@@ -180,7 +180,7 @@ async function loadProducts() {
     throw new Error("The API URL is not configured.");
   }
 
-  const endpoint = new URL("/products", apiBaseUrl);
+  const endpoint = new URL(`${apiBaseUrl}/products`, window.location.origin);
   endpoint.searchParams.set("page", String(currentPage));
   endpoint.searchParams.set("page_size", String(pageSize));
 
