@@ -6,7 +6,7 @@ const CONFIG = {
   PAGE_SIZE: 20,
   RECENT_ORDERS: 10,   // rows in the "Recent orders" card on the overview
   SEARCH_DELAY: 350,   // ms to wait after typing before searching products
-  ALERT_PAGE_SIZE: 5, // rows per page in the expiry cards on the overview
+  ALERT_PAGE_SIZE: 5,  // rows per page in the expiry cards on the overview
   EXPIRY_DAYS: 90,     // "expiring soon" window
 };
 
@@ -44,7 +44,8 @@ function nextStatuses(current) {
 let alertsStale = false; // set after any write, the alert cards reload the next time the overview opens
 
 async function request(method, path, { params, body, allowArray = false } = {}) {
-  const url = new URL(CONFIG.API_BASE + path);
+  // the second argument lets API_BASE be relative ("/api" when deployed behind the Vercel rewrite)
+  const url = new URL(CONFIG.API_BASE + path, window.location.origin);
   for (const [key, value] of Object.entries(params || {})) {
     if (value !== "" && value != null) url.searchParams.set(key, value);
   }
