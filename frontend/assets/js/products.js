@@ -112,7 +112,7 @@ async function loadFeaturedProducts() {
     throw new Error("The API URL is not configured.");
   }
 
-  const endpoint = new URL("/products", apiBaseUrl);
+  const endpoint = new URL(`${apiBaseUrl}/products`, window.location.origin);
   endpoint.searchParams.set("page", "1");
   endpoint.searchParams.set("page_size", String(featuredProductLimit));
 
