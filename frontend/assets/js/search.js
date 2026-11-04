@@ -286,8 +286,8 @@ async function loadProducts() {
   }
 
   const endpoint = new URL(
-    searchName ? "/products/search" : "/products",
-    apiBaseUrl
+  `${apiBaseUrl}${searchName ? "/products/search" : "/products"}`,
+  window.location.origin
   );
   if (searchName) {
     endpoint.searchParams.set("name", searchName);
