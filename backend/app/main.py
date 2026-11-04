@@ -1,4 +1,5 @@
-from fastapi import FastAPI
+import time
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.routers import (
     address,
@@ -13,6 +14,14 @@ from app.api.routers import (
 from app.core.config import FRONTEND_ORIGINS
 
 app = FastAPI()
+
+@app.middleware("http")
+async def log_time(request: Request, call_next):
+    start = time.perf_counter()
+    response = await call_next(request)
+    ms = (time.perf_counter() - start) * 1000
+    print(f"{request.method} {request.url.path} took {ms:.0f} ms", flush=True)
+    return response
 
 app.add_middleware(
     CORSMiddleware,
