@@ -6,7 +6,12 @@ from app.utils.utils import hash_password, verify_password
 from fastapi import Response, Request, HTTPException, Depends
 from typing import Literal
 
-IS_PRODUCTION = ENVIRONMENT == "Production"
+IS_PRODUCTION = ENVIRONMENT.strip().lower() == "production"   # "production", "Production" and "PRODUCTION" all count
+# The browser only ever talks to the frontend's own domain (Vercel forwards /api/* to this server),
+# so the login cookies are first-party and Lax is enough. Lax also blocks other sites from
+# sending the cookie with their requests (CSRF). Use "none" only if the API is ever called
+# straight from another domain.
+COOKIE_SAMESITE = "lax"
 USER_COLUMNS = frozenset(
     {
         "id",
@@ -95,7 +100,7 @@ def login_credentials(userlogin: LoginCredentials, conn, response: Response):
             value = access_token,
             httponly = True,
             secure = IS_PRODUCTION, # True for production false for local
-            samesite = "none" if IS_PRODUCTION else "lax", # none for production lax for local
+            samesite = COOKIE_SAMESITE,
             max_age = 1800
             # domain = "127.0.0.1",
         )
@@ -104,7 +109,7 @@ def login_credentials(userlogin: LoginCredentials, conn, response: Response):
             value = refresh_token,
             httponly = True,
             secure = IS_PRODUCTION,
-            samesite = "none" if IS_PRODUCTION else "lax",
+            samesite = COOKIE_SAMESITE,
             max_age = 604800
             # domain = "127.0.0.1",
         )
@@ -200,7 +205,7 @@ def refresh_access_token(request: Request, response: Response, conn):
         value = access_token,
         httponly = True,
         secure = IS_PRODUCTION,
-        samesite = "none" if IS_PRODUCTION else "lax",
+        samesite = COOKIE_SAMESITE,
         max_age = 1800
     )
     return {"message": "Session refreshed"}
@@ -209,14 +214,14 @@ def logout(response: Response):
     response.delete_cookie(
         key="access_token",
         httponly=True,
-        samesite="none" if IS_PRODUCTION else "lax",
+        samesite=COOKIE_SAMESITE,
         secure=IS_PRODUCTION
     )
 
     response.delete_cookie(
         key="refresh_token",
         httponly=True,
-        samesite="none" if IS_PRODUCTION else "lax",
+        samesite=COOKIE_SAMESITE,
         secure=IS_PRODUCTION
     )
     return {"message": "Logged out successfully"}
