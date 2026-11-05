@@ -1,7 +1,22 @@
 import psycopg
+from psycopg_pool import ConnectionPool
 from psycopg.rows import dict_row
 from app.core.config import DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME
+from psycopg.conninfo import make_conninfo
 
+conninfo = make_conninfo(
+    host=DB_HOST, port=DB_PORT, dbname=DB_NAME,
+    user=DB_USER, password=DB_PASSWORD,
+)
+
+pool = ConnectionPool(
+    conninfo=conninfo,
+    kwargs={"row_factory": dict_row},
+    min_size=1,
+    max_size=5,
+    open=False,
+    check=ConnectionPool.check_connection,
+)
 
 def get_db_connection():
     return psycopg.connect(
