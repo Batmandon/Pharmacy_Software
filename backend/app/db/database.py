@@ -19,17 +19,11 @@ pool = ConnectionPool(
 )
 
 def get_db_connection():
-    return psycopg.connect(
-    host=DB_HOST,
-    port=DB_PORT,
-    user=DB_USER,
-    password=DB_PASSWORD,
-    dbname=DB_NAME,
-    row_factory=dict_row
-)
+    return pool.connection()
+
 
 def get_db():
-    with get_db_connection() as conn:
+    with pool.connection() as conn:
         yield conn
 
 def init_db():
