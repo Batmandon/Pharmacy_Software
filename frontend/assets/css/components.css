@@ -99,7 +99,7 @@
 
 .nav-actions { display: flex; align-items: center; gap: 1.25rem; }
 
-.btn-upload {
+/* .btn-upload {
     background-color: #0d9488;
     color: #fff;
     padding: 0.6rem 1.1rem;
@@ -110,7 +110,7 @@
     transition: background-color 0.2s ease;
 }
 
-.btn-upload:hover { background-color: #0f766e; }
+.btn-upload:hover { background-color: #0f766e; } */
 
 .nav-account {
     text-decoration: none;
@@ -120,7 +120,13 @@
     transition: color 0.2s ease;
 }
 
-.nav-account:hover, .nav-cart:hover { color: #0d9488; }
+.nav-login {
+    text-decoration: none;
+    color: #334155;
+    font-weight: 500;
+    font-size: 0.9rem;
+    transition: color 0.2s ease;
+}
 
 .nav-cart {
     color: #334155;
@@ -128,6 +134,8 @@
     text-decoration: none;
     transition: color 0.2s ease;
 }
+
+.nav-login:hover, .nav-account:hover, .nav-cart:hover { color: #0d9488; }
 
 @media (max-width: 54.375rem) {
     .nav-search {
