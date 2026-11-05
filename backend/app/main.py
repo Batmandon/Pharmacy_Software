@@ -1,4 +1,6 @@
 import time
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.routers import (
@@ -12,8 +14,20 @@ from app.api.routers import (
     products,
 )
 from app.core.config import FRONTEND_ORIGINS
+from app.db.database import init_db, pool
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    pool.open()
+    try:
+        pool.wait()
+        init_db()
+        yield
+    finally:
+        pool.close()
+
+app = FastAPI(lifespan=lifespan)
 
 @app.middleware("http")
 async def log_time(request: Request, call_next):
