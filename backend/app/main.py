@@ -37,6 +37,10 @@ async def log_time(request: Request, call_next):
     print(f"{request.method} {request.url.path} took {ms:.0f} ms", flush=True)
     return response
 
+@app.get("/health")
+async def health_check():
+    return {"status": "OK"}
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=FRONTEND_ORIGINS,
