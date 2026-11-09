@@ -19,6 +19,8 @@ class AdminProductRepository:
             return cur.fetchone()
 
     def list_products(self, search: str | None = None, page: int = 1, page_size: int = 20):
+        page = max(1, page)
+        page_size = max(1, min(100, page_size))
         offset = (page - 1) * page_size
 
         joins = """
