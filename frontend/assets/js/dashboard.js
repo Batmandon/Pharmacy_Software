@@ -115,7 +115,7 @@ const PAYMENT_LABELS = { cod: "Cash on delivery", pickup: "Store pickup" };
 
 function formatDate(value) {
   const d = new Date(value);
-  return isNaN(d) ? "" : dateFmt.format(d);
+  return isNaN(d) ? "" : dateFmt.format(d);  // invalid date strings (like null or if user sends "hello" the JS makes it invalid Date object that's why the validation is necessary) become ""
 }
 const cap = (s) => String(s).charAt(0).toUpperCase() + String(s).slice(1);
 
