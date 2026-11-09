@@ -4,8 +4,8 @@ from app.schemas.product import AddProduct, UpdateProduct
 
 
 def strength_label(alias: str = "p") -> str:
-    """SQL for "Paracetamol 650mg + Caffeine 30mg", built from the product's salts.
-    Products have no strength column any more; the strength lives on each salt."""
+    # SQL for "Paracetamol 650mg + Caffeine 30mg", built from the product's salts.
+    # Products have no strength column any more; the strength lives on each salt.
     return f"""(
         SELECT string_agg(concat_ws(' ', s.name, NULLIF(ps.strength, '')), ' + ' ORDER BY s.name)
         FROM product_salts ps
