@@ -1,17 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 
-from app.core.auth import require_admin
-from app.db.database import get_db
-from app.repositories.admin_products import AdminProductRepository
 
-# Read endpoints for the admin dashboard.
-# (Create / update / delete stay in routers/products.py)
-router = APIRouter(
-    prefix="/admin/products",
-    tags=["admin-products"],
-    dependencies=[Depends(require_admin)],
-)
+from core.db.database import get_db
+from admin_products import AdminProductRepository
 
+router = APIRouter()
 
 @router.get("")
 def list_products(

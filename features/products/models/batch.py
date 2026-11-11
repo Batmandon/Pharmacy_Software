@@ -1,6 +1,6 @@
 from pydantic import ValidationError
 
-from app.schemas.batch import CreateBatch, EditBatch
+from schemas.batch import CreateBatch, EditBatch
 
 
 STOCK_ALERT_THRESHOLDS = {

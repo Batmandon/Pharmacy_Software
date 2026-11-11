@@ -49,6 +49,12 @@ app.add_middleware(
     allow_credentials=True,
 )
 
+router = APIRouter(
+    prefix="/admin/products",
+    tags=["admin-products"],
+    dependencies=[Depends(require_admin)],
+)
+
 app.include_router(auth_routes.router)
 app.include_router(products.router)
 app.include_router(expiry.router)

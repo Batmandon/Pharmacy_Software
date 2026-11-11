@@ -1,6 +1,6 @@
-from app.repositories.pricing import selling_price
-from app.repositories.signature import make_signature
-from app.schemas.product import AddProduct, UpdateProduct
+from shared.pricing import selling_price
+from shared.signature import make_signature
+from schemas.product import AddProduct, UpdateProduct
 
 
 def strength_label(alias: str = "p") -> str:
