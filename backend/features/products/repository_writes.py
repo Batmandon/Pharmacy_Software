@@ -1,28 +1,112 @@
 from pydantic import ValidationError
-
-from schemas.batch import CreateBatch, EditBatch
-
-
-STOCK_ALERT_THRESHOLDS = {
-    "Tablet": 5,
-    "Capsule": 5,
-    "Syrup": 10,
-    "Suspension": 10,
-    "Injection": 5,
-    "Ointment": 5,
-    "Cream": 5,
-    "Gel": 5,
-    "Drops": 3,
-    "Powder": 3,
-    "Inhaler": 3,
-    "Lotion": 3,
-    "Other": 3,
-}
+from backend.features.products.schemas import AddProduct, UpdateProduct
+from backend.features.products.schemas import CreateBatch, EditBatch
+from shared.signature import make_signature
 
 
-class BatchRepository:
+class CrudProductOperation:
     def __init__(self, conn):
         self.conn = conn
+
+    # ============================================================================= #
+    #                              Product CRUD                                     #
+    # ============================================================================= #
+    def _save_salts(self, cur, product_id: int, salts):
+        cur.execute("DELETE FROM product_salts WHERE product_id = %s", (product_id,))
+        for salt in salts:
+            cur.execute(
+                "INSERT INTO product_salts (product_id, salt_id, strength) VALUES (%s, %s, %s)",
+                (product_id, salt.salt_id, salt.strength),
+            )
+
+    def add_product(self, product: AddProduct):
+        with self.conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO products (category_id, manufacturer_id, brand_id, name, form, pack_size, schedule, gst_percent, hsn_code, storage_condition, description, image_url, signature)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id
+                """,
+                (
+                    product.category_id,
+                    product.manufacturer_id,
+                    product.brand_id,
+                    product.name,
+                    product.form,
+                    product.pack_size,
+                    product.schedule,
+                    product.gst_percent,
+                    product.hsn_code,
+                    product.storage_condition,
+                    product.description,
+                    product.image_url,
+                    make_signature(
+                        product.name, product.form, product.pack_size,
+                        [(s.salt_id, s.strength) for s in product.salts],
+                    ),
+                )
+            )
+            product_id = cur.fetchone()["id"]
+            self._save_salts(cur, product_id, product.salts)
+            return {"id": product_id}
+
+    def update_product(self, product_id: int, product: UpdateProduct):
+        sent = product.model_fields_set
+        changes = product.model_dump(exclude_unset=True, exclude={"salts"})
+        with self.conn.cursor() as cur:
+            cur.execute(
+                "SELECT name, form, pack_size FROM products WHERE id = %s FOR UPDATE",
+                (product_id,),
+            )
+            current = cur.fetchone()
+            if current is None:
+                return {"error": f"Product with ID {product_id} does not exist."}
+
+            # the signature depends on name, form, pack size and salts: rebuild it when one of them changes
+            if sent & {"name", "form", "pack_size", "salts"}:
+                if "salts" in sent:
+                    salts = [(s.salt_id, s.strength) for s in product.salts]
+                else:
+                    cur.execute(
+                        """
+                        SELECT salt_id, strength FROM product_salts WHERE product_id = %s
+                        """,
+                        (product_id,),
+                    )
+                    salts = [(r["salt_id"], r["strength"]) for r in cur.fetchall()]
+                changes["signature"] = make_signature(
+                    changes.get("name", current["name"]),
+                    changes.get("form", current["form"]),
+                    changes.get("pack_size", current["pack_size"]),
+                    salts,
+                )
+
+            if changes:
+                assignments = ", ".join(f"{column} = %s" for column in changes)
+                cur.execute(
+                    f"UPDATE products SET {assignments} WHERE id = %s",
+                    (*changes.values(), product_id),
+                )
+            if "salts" in sent:
+                self._save_salts(cur, product_id, product.salts)
+            return {"updated": True}
+
+    def delete_product(self, product_id: int):
+        with self.conn.cursor() as cur:
+            cur.execute(
+                """
+                DELETE FROM products
+                WHERE id = %s
+                """,
+                (product_id,)
+            )
+            if cur.rowcount == 0:
+                return {"error": f"Product with ID {product_id} does not exist."}
+            return {"deleted": True}
+
+    # ============================================================================= #
+    #                               Batch CRUD                                      #
+    # ============================================================================= #
 
     def create_batch(self, batch: CreateBatch):
         with self.conn.cursor() as cur:
@@ -158,92 +242,3 @@ class BatchRepository:
                     "status_code": 404,
                 }
             return {"deleted": True}
-
-    def list_stock_alerts(self):
-        threshold_rows = ", ".join(["(%s, %s)"] * len(STOCK_ALERT_THRESHOLDS))
-        threshold_params = tuple(
-            value
-            for form, threshold in STOCK_ALERT_THRESHOLDS.items()
-            for value in (form, threshold)
-        )
-
-        with self.conn.cursor() as cur:
-            cur.execute(
-                f"""
-                WITH stock_thresholds(form, alert_threshold) AS (
-                    VALUES {threshold_rows}
-                ),
-                product_stock AS (
-                    SELECT p.id AS product_id, p.name, p.form,
-                           COALESCE(SUM(b.quantity), 0)::int AS current_stock,
-                           st.alert_threshold
-                    FROM products p
-                    JOIN stock_thresholds st ON st.form = p.form
-                    LEFT JOIN batches b
-                        ON b.product_id = p.id
-                        AND b.expiry_date >= CURRENT_DATE
-                    WHERE p.is_active = TRUE
-                    GROUP BY p.id, p.name, p.form, st.alert_threshold
-                )
-                SELECT product_id, name, form, current_stock, alert_threshold
-                FROM product_stock
-                WHERE current_stock <= alert_threshold
-                ORDER BY current_stock, name, product_id
-                """,
-                threshold_params,
-            )
-            return cur.fetchall()
-
-    def list_expiry(self, *, expired: bool, within_days: int = 90,
-                    page: int = 1, page_size: int = 20):
-        page_size = min(page_size, 100)
-        offset = (page - 1) * page_size
-
-        if expired:
-            cond = "b.expiry_date < CURRENT_DATE"
-            params = ()
-            order = "b.expiry_date DESC, b.id"
-        else:
-            cond = ("b.expiry_date >= CURRENT_DATE "
-                    "AND b.expiry_date <= CURRENT_DATE + %s::int")
-            params = (within_days,)
-            order = "b.expiry_date ASC, b.id"
-
-        base = f"""
-            FROM batches b
-            JOIN products p ON p.id = b.product_id
-            WHERE {cond} AND b.quantity > 0 AND p.is_active = TRUE
-        """
-
-        with self.conn.cursor() as cur:
-            cur.execute(
-                f"""
-                SELECT p.id AS product_id, p.name, b.id AS batch_id, b.batch_no,
-                       b.expiry_date, b.quantity,
-                       (b.expiry_date - CURRENT_DATE) AS days_left
-                {base}
-                ORDER BY {order}
-                LIMIT %s OFFSET %s
-                """,
-                (*params, page_size, offset),
-            )
-            items = cur.fetchall()
-            for item in items:
-                item["status"] = expiry_status(item["days_left"])
-
-            cur.execute(f"SELECT COUNT(*) AS total {base}", params)
-            total = cur.fetchone()["total"]
-
-        return {"items": items, "page": page, "page_size": page_size, "total": total}
-
-
-def expiry_status(days_left: int) -> str:
-    if days_left < 0:
-        return "expired"
-    if days_left <= 30:
-        return "critical"
-    if days_left <= 60:
-        return "warning"
-    if days_left <= 90:
-        return "soon"
-    return "ok"
