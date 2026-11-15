@@ -71,9 +71,27 @@
    10 - **Surgical Edits:** When modifying code, ensure that changes are consistent with the
       existing modular or legacy patterns as appropriate.
    11
-   12 ## Key Files
+   12 ### Clean JavaScript Style Guidelines
+      To keep frontend code clean, uniform, and easy to read (avoiding messy/cryptic syntax):
+      1. **Named Function Declarations:**
+         - Use standard `function name(params) { ... }` or `async function name(params) { ... }`.
+         - Avoid assigning arrow functions to variables (`const name = () => { ... }`). Keep arrow functions strictly for short inline callbacks (e.g. inside `.map()`, `.filter()`).
+      2. **Explicit Asynchronous Flow (Linear & Readable):**
+         - Always use `async / await` with `try ... catch` blocks.
+         - Do NOT chain `.then().catch().finally()`. Write asynchronous logic top-to-bottom so it reads like clean Python.
+      3. **Avoid Cryptic Operators:**
+         - Avoid `??=`, complex nested ternary operators (`a ? b ? c : d : e`), or complicated destructuring chains.
+         - Prefer explicit, readable `if (...) { ... } else { ... }` blocks.
+      4. **Descriptive Naming:**
+         - Use full, meaningful variable names (`event`, `address`, `order`, `product`) instead of single-letter names (`e`, `a`, `o`, `p`).
+      5. **Single Source of Truth for Shared Utilities:**
+         - All shared utility functions must reside in `frontend/shared/utils.js`.
+   13
+   14 ## Key Files
    13 - `backend/main.py`: FastAPI app initialization and middleware.
    14 - `backend/database.py`: PostgreSQL schema and pool management.
    15 - `backend/core/auth.py`: Token-based authentication logic.
-   16 - `fronten/assets/js/config.js`: Global frontend configuration and API fetch interceptor.
-   17 - `readme.md`: Original project documentation and setup guide.
+   16 - `frontend/shared/config.js`: Global frontend configuration and API fetch interceptor.
+   17 - `frontend/shared/components.js`: Reusable component loader (navbar, footer).
+   18 - `frontend/shared/utils.js`: Centralized shared utility functions.
+   19 - `readme.md`: Original project documentation and setup guide.
