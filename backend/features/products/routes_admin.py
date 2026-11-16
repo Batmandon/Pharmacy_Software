@@ -2,15 +2,14 @@
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 import psycopg
 
-from core.db.database import get_db
+from database import get_db
 
 # db and models imports
 from backend.features.products.schemas import CreateBatch, EditBatch, ProductWithBatch, UpdateProductWithBatch
 
 # Repositories import
-from models.admin_products import AdminProductRepository
-from models.batch import BatchRepository
-from models.products import ProductRepository
+from repository_reads import ReadProductOperation
+from repository_writes import CrudProductOperation
 
 admin_router = APIRouter()
 
@@ -42,14 +41,14 @@ def add_product(
     # If anything below raises, get_db exits with an exception and psycopg rolls back,
     # so a product is never saved without its batch.
     try:
-        created_product = ProductRepository(conn).add_product(data.product)
+        created_product = CrudProductOperation(conn).add_product(data.product)
     except psycopg.errors.UniqueViolation:
         raise HTTPException(status_code=409, detail=DUPLICATE_PRODUCT)
     except psycopg.errors.ForeignKeyViolation as exc:
         raise _missing_item(exc)
 
     batch = CreateBatch(product_id=created_product["id"], **data.batch.model_dump())
-    created_batch = BatchRepository(conn).create_batch(batch)
+    created_batch = CrudProductOperation(conn).create_batch(batch)
     if "error" in created_batch:
         raise HTTPException(
             status_code=created_batch["status_code"],
@@ -68,12 +67,12 @@ def update_product(product_id: int, data: UpdateProductWithBatch, conn=Depends(g
     # Everything runs in one transaction; any error rolls back both.
     try:
         if data.product is not None:
-            result = ProductRepository(conn).update_product(product_id, data.product)
+            result = CrudProductOperation(conn).update_product(product_id, data.product)
             if "error" in result:
                 raise HTTPException(status_code=404, detail=result["error"])
 
         if data.batch is not None:
-            batches = BatchRepository(conn)
+            batches = CrudProductOperation(conn)
             if not batches.batch_belongs_to_product(data.batch_id, product_id):
                 raise HTTPException(
                     status_code=404,
@@ -97,7 +96,7 @@ def update_product(product_id: int, data: UpdateProductWithBatch, conn=Depends(g
 
 @admin_router.delete("/products/{product_id}")
 def delete_product(product_id: int, conn=Depends(get_db)):
-    service = ProductRepository(conn)
+    service = CrudProductOperation(conn)
     try:
         result = service.delete_product(product_id)
     except psycopg.errors.ForeignKeyViolation:
@@ -116,7 +115,7 @@ def delete_product(product_id: int, conn=Depends(get_db)):
 
 @admin_router.post("/batches", status_code=201)
 def create_batch(batch: CreateBatch, conn=Depends(get_db)):
-    result = BatchRepository(conn).create_batch(batch)
+    result = CrudProductOperation(conn).create_batch(batch)
     if "error" in result:
         raise HTTPException(
             status_code=result["status_code"],
@@ -126,7 +125,7 @@ def create_batch(batch: CreateBatch, conn=Depends(get_db)):
 
 @admin_router.patch("/batches/{batch_id}")
 def edit_batch(batch_id: int, batch: EditBatch, conn=Depends(get_db)):
-    result = BatchRepository(conn).edit_batch(batch_id, batch)
+    result = CrudProductOperation(conn).edit_batch(batch_id, batch)
     if "error" in result:
         raise HTTPException(
             status_code=result["status_code"],
@@ -137,7 +136,7 @@ def edit_batch(batch_id: int, batch: EditBatch, conn=Depends(get_db)):
 @admin_router.delete("/batches/{batch_id}")
 def delete_batch(batch_id: int, conn=Depends(get_db)):
     try:
-        result = BatchRepository(conn).delete_batch(batch_id)
+        result = CrudProductOperation(conn).delete_batch(batch_id)
     except psycopg.errors.ForeignKeyViolation:
         raise HTTPException(
             status_code=409,
@@ -152,7 +151,7 @@ def delete_batch(batch_id: int, conn=Depends(get_db)):
 
 @admin_router.get("/batches/stock-alerts")
 def list_stock_alerts(conn=Depends(get_db)):
-    return BatchRepository(conn).list_stock_alerts()
+    return ReadProductOperation(conn).list_stock_alerts()
 
 
 @admin_router.get("")
@@ -163,23 +162,23 @@ def list_products(
     conn=Depends(get_db),
 ):
     search = search.strip() if search else None
-    return AdminProductRepository(conn).list_products(search or None, page, page_size)
+    return ReadProductOperation(conn).list_products(search or None, page, page_size)
 
 
 # "counts" and "salt-strengths" must stay above "/{product_id}" so they are not read as an id.
 @admin_router.get("/counts")
 def get_counts(conn=Depends(get_db)):
-    return AdminProductRepository(conn).get_counts()
+    return ReadProductOperation(conn).get_counts()
 
 
 @admin_router.get("/salt-strengths")
 def get_salt_strengths(conn=Depends(get_db)):
-    return AdminProductRepository(conn).salt_strengths()
+    return ReadProductOperation(conn).salt_strengths()
 
 
 @admin_router.get("/{product_id}")
 def get_product(product_id: int = Path(gt=0), conn=Depends(get_db)):
-    product = AdminProductRepository(conn).get_product(product_id)
+    product = ReadProductOperation(conn).get_product(product_id)
     if product is None:
         raise HTTPException(status_code=404, detail="Product not found.")
     return product

@@ -7,7 +7,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <link rel="stylesheet" href="../assets/css/dashboard.css">
+  <link rel="stylesheet" href="../shared/css/variables.css">
+  <link rel="stylesheet" href="../shared/css/reset.css">
+  <link rel="stylesheet" href="../shared/css/components.css">
+  <link rel="stylesheet" href="../shared/css/utilities.css">
+  <link rel="stylesheet" href="../features/dashboard/dashboard.css">
 </head>
 <body>
 
@@ -383,7 +387,7 @@
   </template>
 
   <!-- ===== Product dialog (add / edit) ===== -->
-  <dialog id="product-dialog" class="dialog" aria-labelledby="product-dialog-title">
+  <dialog id="product-dialog" class="dialog dialog-wide" aria-labelledby="product-dialog-title" data-static="true">
     <form id="product-form" class="dialog-body" novalidate>
       <div class="dialog-head">
         <h3 id="product-dialog-title">Add product</h3>
@@ -524,7 +528,7 @@
   </dialog>
 
   <!-- ===== Batch dialog (add a batch to a product / edit one batch) ===== -->
-  <dialog id="batch-dialog" class="dialog" aria-labelledby="batch-dialog-title">
+  <dialog id="batch-dialog" class="dialog dialog-wide" aria-labelledby="batch-dialog-title">
     <form id="batch-form" class="dialog-body" novalidate>
       <div class="dialog-head">
         <h3 id="batch-dialog-title">Add batch</h3>
@@ -629,6 +633,7 @@
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <script src="../shared/config.js"></script>
-  <script src="../assets/js/dashboard.js"></script>
+  <script type="module" src="../shared/utils.js"></script>
+  <script type="module" src="../features/dashboard/dashboard.js"></script>
 </body>
 </html>

@@ -1,0 +1,149 @@
+/**
+ * Design Tokens & CSS Variables
+ * Pharmacy Management System
+ * Single Source of Truth for Colors, Typography, Spacing, and Elevation.
+ */
+
+:root {
+  /* ==================== BRAND COLOR PALETTE ==================== */
+  --color-primary: #0d9488;           /* Signature Medical Teal */
+  --color-primary-dark: #0b7c72;      /* Deep Teal (hover / active) */
+  --color-primary-darker: #065f57;    /* High contrast dark teal */
+  --color-primary-soft: #e6faf8;      /* Mint / Aqua Soft tint */
+  --color-primary-light: #ccfbf1;     /* Light Teal border / pill fill */
+
+  --color-secondary: #0f1b2d;         /* Deep Navy (headings, dark banners) */
+  --color-secondary-soft: #1a2b45;    /* Soft Navy */
+  --color-secondary-muted: #243856;   /* Navy hover / active */
+
+  --color-accent: #6ee7de;            /* Bright Aqua accent */
+  --color-accent-soft: #f0fdfa;       /* Ultra-soft teal/cyan tint */
+
+  /* ==================== SURFACES & NEUTRALS ==================== */
+  --color-bg: #f6f9fb;                /* Global body background */
+  --color-surface: #ffffff;           /* Cards, modals, sheets, inputs */
+  --color-surface-subtle: #f8fafc;    /* Table headers, neutral badges */
+  --color-surface-muted: #e2e8f0;     /* Inactive elements, disabled fills */
+
+  --color-text-main: #0f1b2d;         /* Primary typography high contrast */
+  --color-text-body: #1e293b;         /* Default readable body text */
+  --color-text-muted: #64748b;        /* Subtitles, hints, timestamps */
+  --color-text-light: #94a3b8;        /* Placeholder, disabled labels */
+  --color-text-inverse: #ffffff;      /* Text on dark surfaces */
+
+  --color-border: #dde5ec;            /* Standard component borders */
+  --color-border-subtle: #f1f5f9;     /* Divider / hairline border */
+  --color-border-hover: #cbd5e1;      /* Hover state borders */
+
+  /* ==================== SEMANTIC FEEDBACK ==================== */
+  --color-success: #16a34a;           /* Green (Delivered, in-stock, success toast) */
+  --color-success-dark: #15803d;
+  --color-success-soft: #dcfce7;      /* Light green badge / alert */
+
+  --color-danger: #dc2626;            /* Red (Cancelled, out of stock, error toast) */
+  --color-danger-dark: #b91c1c;
+  --color-danger-soft: #fee2e2;       /* Light red badge / alert */
+
+  --color-warning: #f59e0b;           /* Amber (Pending, Low Stock) */
+  --color-warning-dark: #d97706;
+  --color-warning-soft: #fef3c7;      /* Light amber badge / alert */
+
+  --color-info: #0284c7;              /* Blue (Information notice) */
+  --color-info-dark: #0369a1;
+  --color-info-soft: #e0f2fe;
+
+  /* ==================== TYPOGRAPHY ==================== */
+  --font-family-base: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  --font-family-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  --font-size-xs: 0.75rem;            /* 12px */
+  --font-size-sm: 0.875rem;           /* 14px */
+  --font-size-base: 1rem;             /* 16px */
+  --font-size-md: 1.125rem;           /* 18px */
+  --font-size-lg: 1.25rem;            /* 20px */
+  --font-size-xl: 1.5rem;             /* 24px */
+  --font-size-2xl: 1.875rem;          /* 30px */
+  --font-size-3xl: 2.25rem;           /* 36px */
+
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  --line-height-none: 1;
+  --line-height-tight: 1.25;
+  --line-height-snug: 1.375;
+  --line-height-base: 1.5;
+  --line-height-relaxed: 1.625;
+
+  /* ==================== SPACING & SIZING ==================== */
+  --space-0-5: 0.125rem;              /* 2px */
+  --space-1: 0.25rem;                 /* 4px */
+  --space-1-5: 0.375rem;              /* 6px */
+  --space-2: 0.5rem;                  /* 8px */
+  --space-2-5: 0.625rem;              /* 10px */
+  --space-3: 0.75rem;                 /* 12px */
+  --space-4: 1rem;                    /* 16px */
+  --space-5: 1.25rem;                 /* 20px */
+  --space-6: 1.5rem;                  /* 24px */
+  --space-8: 2rem;                    /* 32px */
+  --space-10: 2.5rem;                 /* 40px */
+  --space-12: 3rem;                   /* 48px */
+  --space-16: 4rem;                   /* 64px */
+
+  --container-max-width: 1200px;
+  --container-narrow-width: 800px;
+
+  /* ==================== BORDER RADIUS ==================== */
+  --radius-xs: 0.25rem;               /* 4px */
+  --radius-sm: 0.375rem;              /* 6px */
+  --radius-md: 0.5rem;                /* 8px */
+  --radius-lg: 0.75rem;               /* 12px */
+  --radius-xl: 1rem;                  /* 16px */
+  --radius-2xl: 1.5rem;               /* 24px */
+  --radius-full: 9999px;              /* Circular / Pill */
+
+  /* ==================== ELEVATION & SHADOWS ==================== */
+  --shadow-xs: 0 1px 2px rgba(15, 27, 45, 0.04);
+  --shadow-sm: 0 1px 3px rgba(15, 27, 45, 0.07), 0 1px 2px rgba(15, 27, 45, 0.04);
+  --shadow-md: 0 4px 6px -1px rgba(15, 27, 45, 0.08), 0 2px 4px -2px rgba(15, 27, 45, 0.04);
+  --shadow-lg: 0 10px 15px -3px rgba(15, 27, 45, 0.09), 0 4px 6px -4px rgba(15, 27, 45, 0.04);
+  --shadow-xl: 0 20px 25px -5px rgba(15, 27, 45, 0.1), 0 8px 10px -6px rgba(15, 27, 45, 0.04);
+
+  /* ==================== TRANSITIONS ==================== */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ==================== Z-INDEX SCALE ==================== */
+  --z-base: 0;
+  --z-raised: 10;
+  --z-dropdown: 1000;
+  --z-sticky: 1020;
+  --z-fixed: 1030;
+  --z-backdrop: 1040;
+  --z-modal: 1050;
+  --z-toast: 1060;
+
+  /* ==================== BACKWARD-COMPATIBILITY ALIASES ==================== */
+  /* Keeps existing legacy stylesheets functioning seamlessly during refactoring */
+  --navy: var(--color-secondary);
+  --navy-soft: var(--color-secondary-soft);
+  --teal: var(--color-primary);
+  --teal-dark: var(--color-primary-dark);
+  --aqua: var(--color-accent);
+  --aqua-soft: var(--color-primary-soft);
+  --text: var(--color-text-main);
+  --muted: var(--color-text-muted);
+  --border: var(--color-border);
+  --bg: var(--color-bg);
+  --card: var(--color-surface);
+  --danger: var(--color-danger);
+  --green: var(--color-success);
+  --brand: var(--color-primary);
+  --brand-d: var(--color-primary-dark);
+  --tint: var(--color-primary-soft);
+  --ink: var(--color-text-main);
+  --mute: var(--color-text-muted);
+  --line: var(--color-border);
+}

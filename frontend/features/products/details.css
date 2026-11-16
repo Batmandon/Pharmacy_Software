@@ -1,0 +1,400 @@
+/**
+ * Product Details Page (PDP) Styles
+ * Pharmacy Management System
+ * Gallery, product specs, quantity controls, badges, and medical tab views.
+ */
+
+/* ==================== BREADCRUMB ==================== */
+.breadcrumb-container {
+  max-width: var(--container-max-width, 1200px);
+  margin: 1rem auto 0;
+  padding: 0 1.5rem;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 0.5rem);
+  font-size: 0.85rem;
+  color: var(--color-text-muted, #64748b);
+}
+
+.breadcrumb a {
+  color: var(--color-primary, #0d9488);
+  font-weight: var(--font-weight-medium, 500);
+  text-decoration: none;
+}
+
+.breadcrumb a:hover {
+  text-decoration: underline;
+}
+
+.breadcrumb i {
+  font-size: 0.65rem;
+  color: var(--color-text-light, #94a3b8);
+}
+
+/* ==================== PDP LAYOUT ==================== */
+.pdp-wrapper {
+  max-width: var(--container-max-width, 1200px);
+  margin: 1.5rem auto 4rem;
+  padding: 0 1.5rem;
+  display: grid;
+  grid-template-columns: 20rem 1fr;
+  gap: 2.5rem 3rem;
+}
+
+/* ==================== ASIDE GALLERY ==================== */
+.pdp-gallery-aside {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.main-image-box {
+  width: 100%;
+  height: 18rem;
+  background-color: var(--color-surface-subtle, #f8fafc);
+  border: 1px solid var(--color-border, #dde5ec);
+  border-radius: var(--radius-lg, 0.75rem);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+}
+
+.main-image-box img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.thumbnail-row {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.thumb-box {
+  width: 4.5rem;
+  height: 4.5rem;
+  border: 1px solid var(--color-border, #dde5ec);
+  border-radius: var(--radius-md, 0.5rem);
+  padding: 0.35rem;
+  background-color: var(--color-surface, #ffffff);
+  cursor: pointer;
+  transition: border-color var(--transition-fast, 150ms ease),
+              transform var(--transition-fast, 150ms ease);
+}
+
+.thumb-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.thumb-box:hover,
+.thumb-box.active-thumb {
+  border-color: var(--color-primary, #0d9488);
+  border-width: 2px;
+}
+
+/* ==================== MAIN INFO & CONTROLS ==================== */
+.pdp-details-main {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.pdp-header-bar {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.4rem;
+}
+
+.pdp-title {
+  font-size: 1.65rem;
+  font-weight: var(--font-weight-bold, 700);
+  color: var(--color-secondary, #0f1b2d);
+  line-height: var(--line-height-tight, 1.25);
+}
+
+.pdp-meta-top {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.pdp-stock-badge {
+  background-color: var(--color-success-soft, #dcfce7);
+  color: var(--color-success-dark, #15803d);
+  font-size: 0.775rem;
+  font-weight: var(--font-weight-bold, 700);
+  padding: 0.25rem 0.65rem;
+  border-radius: var(--radius-full, 9999px);
+}
+
+.pdp-stock-badge.out-of-stock {
+  background-color: var(--color-danger-soft, #fee2e2);
+  color: var(--color-danger-dark, #b91c1c);
+}
+
+.pdp-brand-info {
+  font-size: var(--font-size-sm, 0.875rem);
+  color: var(--color-text-muted, #64748b);
+  margin-bottom: 0.85rem;
+}
+
+.pdp-price {
+  font-size: 1.75rem;
+  font-weight: var(--font-weight-bold, 700);
+  color: var(--color-secondary, #0f1b2d);
+  margin-bottom: 0.85rem;
+}
+
+.pdp-description {
+  font-size: 0.925rem;
+  color: var(--color-text-body, #1e293b);
+  line-height: var(--line-height-relaxed, 1.625);
+  margin-bottom: 1.5rem;
+}
+
+/* Action Controls */
+.pdp-action-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  margin-bottom: 0.85rem;
+}
+
+.qty-counter {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--color-border, #dde5ec);
+  border-radius: var(--radius-md, 0.5rem);
+  overflow: hidden;
+  background-color: var(--color-surface-subtle, #f8fafc);
+}
+
+.qty-btn {
+  width: 2.25rem;
+  height: 2.5rem;
+  border: none;
+  background: none;
+  font-size: 1.1rem;
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--color-text-body, #1e293b);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color var(--transition-fast, 150ms ease);
+}
+
+.qty-btn:hover {
+  background-color: var(--color-border, #dde5ec);
+}
+
+.qty-input {
+  width: 2.25rem;
+  height: 2.5rem;
+  border: none;
+  background: none;
+  text-align: center;
+  font-weight: var(--font-weight-bold, 700);
+  font-size: 0.95rem;
+  color: var(--color-secondary, #0f1b2d);
+}
+
+.btn-add-to-cart {
+  flex: 1;
+  height: 2.5rem;
+  background-color: var(--color-primary, #0d9488);
+  color: var(--color-text-inverse, #ffffff);
+  border: none;
+  border-radius: var(--radius-md, 0.5rem);
+  font-weight: var(--font-weight-bold, 700);
+  font-size: 0.925rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2, 0.5rem);
+  transition: background-color var(--transition-fast, 150ms ease);
+}
+
+.btn-add-to-cart:hover {
+  background-color: var(--color-primary-dark, #0b7c72);
+}
+
+.btn-wishlist {
+  font-size: 0.85rem;
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--color-text-muted, #64748b);
+  text-decoration: none;
+  margin-bottom: 1.5rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: color var(--transition-fast, 150ms ease);
+}
+
+.btn-wishlist:hover {
+  color: var(--color-primary, #0d9488);
+}
+
+.pdp-badges-row {
+  display: flex;
+  gap: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border-subtle, #f1f5f9);
+  width: 100%;
+}
+
+.eligibility-badge {
+  font-size: 0.825rem;
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--color-primary, #0d9488);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* ==================== TABBED MEDICAL INFO ==================== */
+.pdp-tab-section {
+  grid-column: 1 / -1;
+  margin-top: 1rem;
+}
+
+.tab-headers {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  background-color: var(--color-surface-subtle, #f1f5f9);
+  border-radius: var(--radius-lg, 0.75rem) var(--radius-lg, 0.75rem) 0 0;
+  border: 1px solid var(--color-border, #cbd5e1);
+  border-bottom: none;
+  overflow: hidden;
+}
+
+.tab-header-item {
+  border: 0;
+  font: inherit;
+  padding: 0.85rem 1rem;
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: var(--font-weight-bold, 700);
+  color: var(--color-text-muted, #64748b);
+  cursor: pointer;
+  background-color: var(--color-surface-subtle, #f1f5f9);
+  border-bottom: 3px solid transparent;
+  transition: all var(--transition-fast, 150ms ease);
+}
+
+.tab-header-item:hover,
+.tab-header-item.active-hover-tab {
+  background-color: var(--color-surface, #ffffff);
+  color: var(--color-secondary, #0f1b2d);
+  border-bottom-color: var(--color-primary, #0d9488);
+}
+
+.tab-header-item:focus-visible {
+  outline: 3px solid var(--color-primary, #0d9488);
+  outline-offset: -3px;
+}
+
+.warning-icon {
+  color: var(--color-warning, #f59e0b);
+  margin-left: 0.25rem;
+}
+
+.tab-content-container {
+  background-color: var(--color-surface, #ffffff);
+  border: 1px solid var(--color-border, #cbd5e1);
+  border-radius: 0 0 var(--radius-lg, 0.75rem) var(--radius-lg, 0.75rem);
+  padding: 1.5rem;
+}
+
+.pane-heading {
+  font-size: 1.1rem;
+  font-weight: var(--font-weight-bold, 700);
+  color: var(--color-secondary, #0f1b2d);
+  margin-bottom: 1rem;
+}
+
+.alert-box.allergy-alert {
+  background-color: var(--color-warning-soft, #fef3c7);
+  border: 1px solid #fde68a;
+  border-radius: var(--radius-md, 0.5rem);
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: var(--font-size-sm, 0.875rem);
+  color: #92400e;
+  margin-bottom: 1rem;
+}
+
+.alert-box i {
+  font-size: 1.1rem;
+}
+
+.warning-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1.25rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.warning-list li {
+  font-size: var(--font-size-sm, 0.875rem);
+  color: var(--color-text-body, #1e293b);
+  line-height: var(--line-height-base, 1.5);
+}
+
+.warning-list i {
+  color: var(--color-secondary, #0f1b2d);
+  margin-top: 0.2rem;
+}
+
+.side-effects-text {
+  font-size: var(--font-size-sm, 0.875rem);
+  line-height: var(--line-height-base, 1.5);
+}
+
+.detail-source {
+  display: block;
+  margin-top: 1rem;
+  color: var(--color-text-muted, #64748b);
+  font-size: var(--font-size-xs, 0.75rem);
+}
+
+.product-action-message {
+  min-height: 1.5rem;
+  color: var(--color-primary-dark, #0b7c72);
+  font-size: var(--font-size-sm, 0.875rem);
+}
+
+.product-action-message.is-error {
+  color: var(--color-danger, #dc2626);
+}
+
+/* ==================== RESPONSIVE ==================== */
+@media (max-width: 44rem) {
+  .pdp-wrapper {
+    grid-template-columns: 1fr;
+  }
+  .tab-headers {
+    grid-template-columns: 1fr 1.5fr 1fr 0.8fr;
+  }
+  .tab-header-item {
+    font-size: 0.8rem;
+    font-weight: var(--font-weight-semibold, 600);
+    padding: 0.7rem 0.5rem;
+  }
+}

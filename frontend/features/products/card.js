@@ -22,7 +22,7 @@ export function renderProductCard(product) {
   const mrp = getAmount(product.mrp);
   const productId = Number(product.id);
   const hasValidId = Number.isSafeInteger(productId) && productId > 0;
-  const detailUrl = hasValidId ? `product_detail..html?id=${productId}` : "#";
+  const detailUrl = hasValidId ? `product_detail.html?id=${productId}` : "#";
 
   const priceMarkup = sellingPrice === null
     ? '<span class="product-price">Price unavailable</span>'
@@ -79,7 +79,7 @@ export function renderCatalogCard(product) {
         </div>`
     : '<p class="price-unavailable">Price unavailable</p>';
 
-  const detailUrl = `product_detail..html?id=${productId}`;
+  const detailUrl = `product_detail.html?id=${productId}`;
 
   return `<article class="card product-card" data-product-id="${productId}">
     <div class="card-img product-img-box">

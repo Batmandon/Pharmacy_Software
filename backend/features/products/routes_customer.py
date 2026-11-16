@@ -2,8 +2,8 @@ import logging
 
 import psycopg
 from fastapi import APIRouter, HTTPException, Depends, Path, Query
-from core.db.database import get_db
-from models.products import ProductRepository
+from database import get_db
+from repository_reads import ReadProductOperation
 
 
 customer_router = APIRouter()
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 def list_products(page: int = Query(1, ge=1),
                   page_size: int = Query(20, ge=1, le=100),
                   conn=Depends(get_db)):
-    return ProductRepository(conn).list_products(page, page_size)
+    return ReadProductOperation(conn).list_products(page, page_size)
 
 @customer_router.get("/products/search")
 def search_products(
@@ -30,7 +30,7 @@ def search_products(
     name = name.strip()
     if not name:
         raise HTTPException(status_code=422, detail="Search name cannot be blank")
-    result = ProductRepository(conn).search_products(name, page, page_size)
+    result = ReadProductOperation(conn).search_products(name, page, page_size)
     if result["total"] == 0:
         raise HTTPException(
             status_code=404,
@@ -44,7 +44,7 @@ def get_product_details(
     conn=Depends(get_db),
 ):
     try:
-        product = ProductRepository(conn).get_product_details(product_id)
+        product = ReadProductOperation(conn).get_product_details(product_id)
     except psycopg.Error:
         logger.exception("get_product_details failed")
         raise HTTPException(

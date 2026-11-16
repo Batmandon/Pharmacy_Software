@@ -1,0 +1,639 @@
+/**
+ * Admin Dashboard Feature Styles
+ * Pharmacy Management System
+ * Admin sidebar navigation, analytics metric tiles, inventory tables, batch management, and alert feeds.
+ */
+
+/* ==================== ADMIN LAYOUT ==================== */
+.admin {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  min-height: 100vh;
+  width: 100%;
+}
+
+/* ==================== SIDEBAR ==================== */
+.sidebar {
+  background: var(--color-secondary, #0f1b2d);
+  color: var(--color-text-inverse, #ffffff);
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  box-shadow: var(--shadow-sm);
+  z-index: var(--z-sticky, 1020);
+}
+
+.brand {
+  font-weight: var(--font-weight-bold, 700);
+  font-size: 1.05rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 8px;
+  color: var(--color-text-inverse, #ffffff);
+}
+
+.brand i {
+  color: var(--color-accent, #6ee7de);
+  font-size: 1.15rem;
+}
+
+.brand span {
+  font-size: 0.7rem;
+  font-weight: var(--font-weight-semibold, 600);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: var(--color-secondary-soft, #1a2b45);
+  color: var(--color-accent, #6ee7de);
+  padding: 3px 8px;
+  border-radius: var(--radius-full, 9999px);
+}
+
+.nav {
+  display: grid;
+  gap: 6px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 11px 14px;
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-md, 0.5rem);
+  color: #b8c4d3;
+  font-family: var(--font-family-base);
+  font-weight: var(--font-weight-medium, 500);
+  font-size: 0.92rem;
+  text-align: left;
+  cursor: pointer;
+  transition: all var(--transition-fast, 150ms ease);
+}
+
+.nav-item:hover {
+  background: var(--color-secondary-soft, #1a2b45);
+  color: var(--color-text-inverse, #ffffff);
+}
+
+.nav-item.active {
+  background: var(--color-primary, #0d9488);
+  color: var(--color-text-inverse, #ffffff);
+}
+
+.nav-item i {
+  width: 18px;
+  text-align: center;
+}
+
+.nav-bottom {
+  margin-top: auto;
+  display: grid;
+  gap: 6px;
+}
+
+a.nav-item {
+  text-decoration: none;
+}
+
+/* ==================== MAIN CONTENT & TOPBAR ==================== */
+.main {
+  padding: 28px 28px 60px;
+  min-width: 0;
+  max-width: 100vw;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.topbar h1 {
+  font-size: 1.7rem;
+  font-weight: var(--font-weight-bold, 700);
+  color: var(--color-secondary, #0f1b2d);
+}
+
+/* ==================== ANALYTICS STAT TILES ==================== */
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.tile {
+  background: var(--color-surface, #ffffff);
+  border: 1px solid var(--color-border, #dde5ec);
+  border-radius: var(--radius-xl, 1rem);
+  padding: 18px 20px;
+  display: grid;
+  gap: 8px;
+  box-shadow: var(--shadow-xs);
+}
+
+.tile-label {
+  color: var(--color-text-muted, #64748b);
+  font-size: var(--font-size-sm, 0.875rem);
+  font-weight: var(--font-weight-medium, 500);
+}
+
+.tile-value {
+  font-size: 1.8rem;
+  font-weight: var(--font-weight-bold, 700);
+  line-height: var(--line-height-none, 1);
+  color: var(--color-secondary, #0f1b2d);
+}
+
+/* ==================== DATA TABLES & CARDS ==================== */
+.card-title {
+  font-size: 1.05rem;
+  font-weight: var(--font-weight-bold, 700);
+  color: var(--color-secondary, #0f1b2d);
+  margin-bottom: 14px;
+}
+
+.card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.card-head .card-title {
+  margin-bottom: 0;
+}
+
+.table-wrap {
+  overflow-x: auto;
+  border-radius: var(--radius-md, 0.5rem);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+.table th {
+  text-align: left;
+  color: var(--color-text-muted, #64748b);
+  font-weight: var(--font-weight-medium, 500);
+  font-size: var(--font-size-xs, 0.75rem);
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--color-border, #dde5ec);
+  white-space: nowrap;
+  background-color: var(--color-surface-subtle, #f8fafc);
+}
+
+.table td {
+  padding: 12px;
+  border-bottom: 1px solid var(--color-border, #dde5ec);
+  vertical-align: middle;
+  color: var(--color-text-body, #1e293b);
+}
+
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.table .num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.table .actions {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.table .actions > * + * {
+  margin-left: 4px;
+}
+
+.cell-name {
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--color-secondary, #0f1b2d);
+}
+
+.cell-sub {
+  color: var(--color-text-muted, #64748b);
+  font-size: 0.82rem;
+  margin-top: 2px;
+}
+
+/* Product thumbnail cell in inventory table */
+.cell-product {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.thumb {
+  position: relative;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md, 0.5rem);
+  overflow: hidden;
+  background: var(--color-primary-soft, #e6faf8);
+  color: var(--color-primary-dark, #0b7c72);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border, #dde5ec);
+}
+
+.thumb img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #ffffff;
+  opacity: 0;
+  transition: opacity var(--transition-fast, 150ms ease);
+}
+
+.thumb img.loaded {
+  opacity: 1;
+}
+
+/* ==================== TOOLBAR & CONTROLS ==================== */
+.toolbar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  align-items: center;
+}
+
+.toolbar .input {
+  flex: 1;
+  min-width: 0;
+}
+
+.toolbar .select {
+  flex: 0 0 200px;
+}
+
+.input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1.5px solid var(--color-border, #dde5ec);
+  border-radius: var(--radius-md, 0.5rem);
+  background: var(--color-surface, #ffffff);
+  color: var(--color-text-body, #1e293b);
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-sm, 0.875rem);
+  outline: none;
+  transition: border-color var(--transition-fast, 150ms ease),
+              box-shadow var(--transition-fast, 150ms ease);
+}
+
+.input:focus {
+  border-color: var(--color-primary, #0d9488);
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
+}
+
+textarea.input {
+  resize: vertical;
+}
+
+.input-sm {
+  width: auto;
+  min-width: 130px;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  border-radius: var(--radius-md, 0.5rem);
+}
+
+.select-add {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.select-add .input {
+  flex: 1;
+  min-width: 0;
+}
+
+.pager {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 14px;
+}
+
+.field {
+  margin-bottom: 14px;
+}
+
+.field label {
+  display: block;
+  font-weight: var(--font-weight-medium, 500);
+  font-size: 0.88rem;
+  color: var(--color-secondary, #0f1b2d);
+  margin-bottom: 6px;
+}
+
+.opt {
+  color: var(--color-text-muted, #64748b);
+  font-weight: var(--font-weight-regular, 400);
+  font-size: 0.78rem;
+}
+
+.error {
+  display: block;
+  color: var(--color-danger, #dc2626);
+  font-size: 0.8rem;
+  min-height: 0;
+  margin-top: 4px;
+}
+
+.error:empty {
+  display: none;
+}
+
+.field.invalid .input {
+  border-color: var(--color-danger, #dc2626);
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+fieldset {
+  border: 1px solid var(--color-border, #dde5ec);
+  border-radius: var(--radius-lg, 0.75rem);
+  padding: 16px 16px 4px;
+  margin-bottom: 16px;
+}
+
+legend {
+  padding: 0 8px;
+  font-weight: var(--font-weight-semibold, 600);
+  font-size: 0.9rem;
+  color: var(--color-primary-dark, #0b7c72);
+}
+
+.salt-list {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.salt-row {
+  display: grid;
+  grid-template-columns: 1fr 140px 34px 34px;
+  gap: 8px;
+  align-items: center;
+}
+
+/* ==================== BATCH ACCORDIONS ==================== */
+[data-action="toggle-batches"] .fa-chevron-down {
+  font-size: 0.7rem;
+  transition: transform var(--transition-fast, 150ms ease);
+}
+
+[data-action="toggle-batches"][aria-expanded="true"] .fa-chevron-down {
+  transform: rotate(180deg);
+}
+
+.batch-panel > td {
+  background: var(--color-bg, #f6f9fb);
+  padding: 0;
+}
+
+.batch-box {
+  padding: 14px 16px 16px;
+}
+
+.batch-box-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.table-inner th,
+.table-inner td {
+  padding: 8px 10px;
+}
+
+.table-inner td {
+  border-bottom-color: #e8eef3;
+}
+
+.tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 8px;
+  border-radius: var(--radius-full, 9999px);
+  font-size: 0.72rem;
+  font-weight: var(--font-weight-semibold, 600);
+  white-space: nowrap;
+}
+
+.tag-soon {
+  background: var(--color-warning-soft, #fef3c7);
+  color: var(--color-warning-dark, #b45309);
+}
+
+.tag-expired {
+  background: var(--color-danger-soft, #fee2e2);
+  color: var(--color-danger-dark, #b91c1c);
+}
+
+/* ==================== DASHBOARD ALERTS FEED ==================== */
+.alerts {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-top: 14px;
+  align-items: start;
+}
+
+.alerts .card {
+  margin-top: 0;
+  min-width: 0;
+}
+
+.scroll-box {
+  max-height: 340px;
+  overflow-y: auto;
+}
+
+.alerts .link-btn {
+  font-weight: var(--font-weight-semibold, 600);
+  text-align: left;
+}
+
+.tag-critical {
+  background: var(--color-danger-soft, #fee2e2);
+  color: var(--color-danger-dark, #b91c1c);
+}
+
+.tag-warning {
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.tag-expiry {
+  background: var(--color-warning-soft, #fef3c7);
+  color: var(--color-warning-dark, #b45309);
+}
+
+.alerts .pager {
+  margin-top: 10px;
+}
+
+.alerts .pager .muted {
+  text-align: center;
+  font-size: 0.8rem;
+}
+
+/* ==================== ORDER DETAIL DIALOG ==================== */
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 20px;
+  margin: 12px 0 18px;
+}
+
+.detail-grid dt {
+  font-size: 0.78rem;
+  color: var(--color-text-muted, #64748b);
+}
+
+.detail-grid dd {
+  margin: 2px 0 0;
+  font-weight: var(--font-weight-medium, 500);
+  color: var(--color-secondary, #0f1b2d);
+  overflow-wrap: anywhere;
+}
+
+.totals {
+  margin: 12px 0 0;
+  margin-left: auto;
+  width: min(280px, 100%);
+}
+
+.totals > div {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+}
+
+.totals dd {
+  margin: 0;
+}
+
+.totals-grand {
+  border-top: 1px solid var(--color-border, #dde5ec);
+  margin-top: 4px;
+  padding-top: 8px !important;
+  font-weight: var(--font-weight-bold, 700);
+  color: var(--color-primary-dark, #0b7c72);
+}
+
+#product-dialog,
+#batch-dialog {
+  width: min(760px, 94vw);
+}
+
+/* ==================== RESPONSIVE DASHBOARD ==================== */
+@media (max-width: 1100px) {
+  .alerts {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .admin {
+    grid-template-columns: 1fr;
+  }
+  .sidebar {
+    position: static;
+    height: auto;
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 14px 16px;
+  }
+  .nav {
+    grid-auto-flow: column;
+  }
+  .nav-item {
+    padding: 9px 12px;
+  }
+  .nav-bottom {
+    margin-top: 0;
+    margin-left: auto;
+    grid-auto-flow: column;
+  }
+  .nav-bottom .nav-item {
+    width: auto;
+  }
+  .main {
+    padding: 20px 16px 60px;
+  }
+  .tiles {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 560px) {
+  .brand {
+    font-size: 0;
+  }
+  .brand i {
+    font-size: 1.2rem;
+  }
+  .brand span,
+  .nav-item span {
+    display: none;
+  }
+  .nav-item {
+    padding: 10px 12px;
+  }
+  .toolbar {
+    flex-direction: column;
+  }
+  .toolbar .select {
+    flex: 1 1 auto;
+  }
+  .grid-2,
+  .grid-3,
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+  .salt-row {
+    grid-template-columns: 1fr 100px 34px;
+  }
+  .tile-value {
+    font-size: 1.5rem;
+  }
+  .table {
+    min-width: 560px;
+  }
+}

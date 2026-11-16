@@ -62,6 +62,38 @@ export function formatDate(value, dateFmt = defaultDateFmt) {
   return Number.isNaN(d.getTime()) ? "" : dateFmt.format(d);
 }
 
+const defaultDateOnlyFmt = new Intl.DateTimeFormat("en-IN", {
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+  timeZone: "UTC",
+});
+
+export function formatDateOnly(value) {
+  if (!value) return "";
+  const dateString = typeof value === "string" && !value.includes("T") ? `${value}T00:00:00Z` : value;
+  const d = new Date(dateString);
+  return Number.isNaN(d.getTime()) ? "" : defaultDateOnlyFmt.format(d);
+}
+
+const indianNumberFmt = new Intl.NumberFormat("en-IN");
+
+export function formatNumber(value) {
+  const num = Number(value);
+  return Number.isFinite(num) ? indianNumberFmt.format(num) : "0";
+}
+
+export function renderTableMessage(tbody, columns, text) {
+  if (!tbody) return;
+  const td = document.createElement("td");
+  td.colSpan = columns;
+  td.className = "empty";
+  td.textContent = text;
+  const tr = document.createElement("tr");
+  tr.append(td);
+  tbody.replaceChildren(tr);
+}
+
 export function addressText(a) {
   if (!a) return "";
   if (typeof a === "string") return a;
@@ -161,6 +193,9 @@ if (typeof window !== "undefined") {
     getImageUrl,
     getSafeImageUrl,
     formatDate,
+    formatDateOnly,
+    formatNumber,
+    renderTableMessage,
     addressText,
     getErrorMessage,
     readResponse,
