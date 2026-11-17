@@ -14,3 +14,4 @@ backend/app/uploads/
 .ruff_cache/
 api-docs/postman/
 api-docs/.postman/
+GEMINI.md
