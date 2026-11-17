@@ -1,7 +1,7 @@
-from app.core.auth import get_user
+from features.auth.auth_repo import get_user
 from decimal import Decimal, ROUND_HALF_UP
-from app.repositories.pricing import selling_price
-from app.repositories.products import strength_label
+from shared.pricing import selling_price
+from features.products.repository_reads import strength_label
 
 # Schedules that need a prescription. Orders with these are blocked until the
 # prescription flow is built.

@@ -80,7 +80,7 @@ export async function fetchDeliveryAddresses() {
  */
 export async function fetchCustomerOrders() {
   const apiBaseUrl = getApiBaseUrl();
-  const response = await fetch(`${apiBaseUrl}/account/orders`, {
+  const response = await fetch(`${apiBaseUrl}/orders`, {
     credentials: "include",
   });
   const data = await readResponse(response);

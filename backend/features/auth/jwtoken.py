@@ -1,6 +1,6 @@
 from fastapi import HTTPException, status
 from datetime import datetime, timedelta, timezone
-from app.core.config import SECRET_KEY, ALGORITHM
+from config import SECRET_KEY, ALGORITHM
 import jwt
 
 if not SECRET_KEY:

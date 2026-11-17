@@ -5,10 +5,10 @@ from typing import Annotated
 import psycopg
 from fastapi import APIRouter, Depends, HTTPException, Path, status
 
-from app.core.auth import get_current_user, get_user
-from app.db.database import get_db
-from app.repositories.address import AddressRepository
-from app.schemas.address import CreateAddress, UpdateAddress
+from features.auth.auth_repo import get_current_user, get_user
+from database import get_db
+from features.address.address_repo import AddressRepository
+from features.address.address_model import CreateAddress, UpdateAddress
 
 router = APIRouter(prefix="/addresses", tags=["addresses"])
 logger = logging.getLogger(__name__)

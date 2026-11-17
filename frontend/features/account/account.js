@@ -36,10 +36,13 @@ const orderEmptyEl = document.getElementById("order-empty");
 const orderDialog = document.getElementById("order-dialog");
 const logoutBtn = document.getElementById("logout-btn");
 
+/**
+ * Update stats in hero banner and populate profile overview summary cards.
+ */
 function updateStatsAndOverviews() {
   const activeOrders = state.orders.filter(function checkActive(order) {
-    const s = String(order.status || "").toLowerCase();
-    return s === "pending" || s === "processing" || s === "confirmed";
+    const status = String(order.status || "").toLowerCase();
+    return status === "pending" || status === "processing" || status === "confirmed";
   });
 
   updateHeroBanner(state.profile, {
@@ -53,7 +56,10 @@ function updateStatsAndOverviews() {
   updateProfileOverviews(defaultAddress, latestOrder);
 }
 
-function showTab(name, options = { updateHash: true }) {
+/**
+ * Switch active account tab and show corresponding panel.
+ */
+export function showTab(name, options = { updateHash: true }) {
   const targetName = document.getElementById(`panel-${name}`) ? name : "profile";
 
   document.querySelectorAll(".tab").forEach(function updateTab(button) {
@@ -71,8 +77,19 @@ function showTab(name, options = { updateHash: true }) {
   }
 }
 
+/**
+ * Render customer order list cards.
+ */
 function renderOrdersList() {
   if (!orderListEl) return;
+
+  if (state.orders.length === 0) {
+    orderListEl.replaceChildren();
+    if (orderEmptyEl) {
+      orderEmptyEl.hidden = false;
+    }
+    return;
+  }
 
   const renderedOrderCards = state.orders.map(function mapOrder(order) {
     return renderOrderCard(order, {
@@ -91,6 +108,9 @@ function renderOrdersList() {
   }
 }
 
+/**
+ * Handle user logout with confirmation modal.
+ */
 async function handleLogoutClick() {
   const confirmed = await confirmAction({
     title: "Log out?",
@@ -109,29 +129,159 @@ async function handleLogoutClick() {
   }
 }
 
-async function initAccountPage() {
-  const initialHash = typeof location !== "undefined" ? location.hash.slice(1) : "";
-  showTab(initialHash || "profile", { updateHash: false });
+/**
+ * Provide a subtle bounce animation when the user clicks the backdrop or presses Escape on a locked dialog.
+ */
+function triggerDialogStaticFeedback(dialog) {
+  if (!dialog) return;
+  dialog.classList.remove("dialog-bounce");
+  void dialog.offsetWidth;
+  dialog.classList.add("dialog-bounce");
+  dialog.addEventListener(
+    "animationend",
+    function handleAnimationEnd() {
+      dialog.classList.remove("dialog-bounce");
+    },
+    { once: true }
+  );
+}
 
-  // 1. Fetch Profile and check authorization
-  let profileData;
-  try {
-    profileData = await fetchProfile();
-  } catch (error) {
-    if (!error.unauthorized && pageMessage) {
-      showMessage(pageMessage, "Could not load your profile. Please refresh.", "error");
+/**
+ * Attach synchronous event listeners for navigation, tabs, quick jumps, dialogs, and logout.
+ * Must run immediately on page load so UI is never dead or blocked by async network calls.
+ */
+function initNavigationEvents() {
+  // Tab switching
+  const tabsNav = document.getElementById("tabs");
+  if (tabsNav) {
+    tabsNav.addEventListener("click", function handleTabClick(event) {
+      const tabBtn = event.target.closest(".tab");
+      if (tabBtn && tabBtn.dataset.tab) {
+        showTab(tabBtn.dataset.tab);
+      }
+    });
+  }
+
+  // Hash change support
+  if (typeof window !== "undefined") {
+    window.addEventListener("hashchange", function handleHashChange() {
+      const requestedTab = window.location.hash.slice(1);
+      showTab(requestedTab, { updateHash: false });
+    });
+  }
+
+  // Quick jump links (e.g. data-goto="addresses" or data-goto="orders")
+  document.addEventListener("click", function handleQuickJumpClick(event) {
+    const jumpLink = event.target.closest("[data-goto]");
+    if (jumpLink && jumpLink.dataset.goto) {
+      showTab(jumpLink.dataset.goto);
     }
-    return;
+  });
+
+  // Logout button
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", handleLogoutClick);
   }
 
-  if (profileData && profileData.role === "admin") {
-    window.location.replace("dashboard.html");
-    return;
+  // Dialog close and backdrop interactions
+  document.addEventListener("click", function handleDialogCloser(event) {
+    const closer = event.target.closest("[data-close]");
+    if (closer) {
+      const dialog = closer.closest("dialog");
+      if (dialog && typeof dialog.close === "function") {
+        dialog.close();
+      }
+      return;
+    }
+    if (event.target instanceof HTMLDialogElement) {
+      if (event.target.id === "address-dialog" || event.target.hasAttribute("data-static")) {
+        triggerDialogStaticFeedback(event.target);
+        return;
+      }
+      event.target.close();
+    }
+  });
+
+  // Prevent Escape key dismissing static dialogs
+  document.addEventListener(
+    "cancel",
+    function handleDialogCancel(event) {
+      if (
+        event.target instanceof HTMLDialogElement &&
+        (event.target.id === "address-dialog" || event.target.hasAttribute("data-static"))
+      ) {
+        event.preventDefault();
+        triggerDialogStaticFeedback(event.target);
+      }
+    },
+    true
+  );
+
+  // Phone and Pincode digit sanitization
+  document.addEventListener("input", function handleDigitSanitizing(event) {
+    const input = event.target;
+    if (!(input instanceof HTMLInputElement) || !input.form) return;
+    if (input.name === "phone" || input.name === "pincode") {
+      input.value = input.value.replace(/\D/g, "");
+    }
+  });
+}
+
+/**
+ * Asynchronously fetch account profile, addresses, and orders from backend.
+ * Gracefully handles offline or unauthenticated mode without crashing the page UI.
+ */
+async function hydrateAccountData() {
+  // 1. Fetch Profile
+  try {
+    const profileData = await fetchProfile();
+    if (profileData && profileData.role === "admin") {
+      window.location.replace("dashboard.html");
+      return;
+    }
+    state.profile = profileData || {};
+    renderProfileForm(state.profile);
+  } catch (error) {
+    console.warn("Could not load backend profile:", error);
+    if (pageMessage && !error.unauthorized) {
+      showMessage(
+        pageMessage,
+        "Offline Preview: Backend not connected. You can test editing and addresses locally.",
+        "info"
+      );
+    }
   }
 
-  state.profile = profileData || {};
+  // 2. Fetch Addresses and Orders in parallel
+  const [addressResult, orderResult] = await Promise.allSettled([
+    fetchAddresses(),
+    fetchCustomerOrders(),
+  ]);
 
-  // 2. Initialize Sub-Controllers
+  if (addressResult.status === "fulfilled" && Array.isArray(addressResult.value)) {
+    state.addresses = addressResult.value;
+  } else {
+    state.addresses = [];
+  }
+  renderAddressesList(state.addresses);
+
+  if (orderResult.status === "fulfilled" && Array.isArray(orderResult.value)) {
+    state.orders = orderResult.value;
+  } else {
+    state.orders = [];
+  }
+  renderOrdersList();
+
+  updateStatsAndOverviews();
+}
+
+/**
+ * Main initialization entry point.
+ */
+export async function initAccountPage() {
+  // Step 1: Immediate synchronous UI bindings (Navigation, Tabs, Controllers, Dialogs)
+  initNavigationEvents();
+
   initProfileController({
     onProfileUpdated: function handleProfileUpdate(updatedProfile) {
       state.profile = updatedProfile;
@@ -146,75 +296,21 @@ async function initAccountPage() {
     },
   });
 
+  // Render initial form with default/blank profile so inputs are populated
   renderProfileForm(state.profile);
 
-  // 3. Fetch Addresses and Orders in parallel
-  const [addressResult, orderResult] = await Promise.allSettled([
-    fetchAddresses(),
-    fetchCustomerOrders(),
-  ]);
+  // Set initial active tab from location hash or default to 'profile'
+  const initialHash = typeof location !== "undefined" ? location.hash.slice(1) : "";
+  showTab(initialHash || "profile", { updateHash: false });
 
-  if (addressResult.status === "fulfilled") {
-    state.addresses = addressResult.value || [];
-    renderAddressesList(state.addresses);
-  }
-
-  if (orderResult.status === "fulfilled") {
-    state.orders = orderResult.value || [];
-    renderOrdersList();
-  }
-
-  updateStatsAndOverviews();
-
-  // 4. Attach Navigation & Global Dialog Listeners
-  const tabsNav = document.getElementById("tabs");
-  if (tabsNav) {
-    tabsNav.addEventListener("click", function handleTabClick(event) {
-      const tabBtn = event.target.closest(".tab");
-      if (tabBtn && tabBtn.dataset.tab) {
-        showTab(tabBtn.dataset.tab);
-      }
-    });
-  }
-
-  if (typeof window !== "undefined") {
-    window.addEventListener("hashchange", function handleHashChange() {
-      showTab(location.hash.slice(1), { updateHash: false });
-    });
-  }
-
-  document.addEventListener("click", function handleQuickJumpClick(event) {
-    const jumpLink = event.target.closest("[data-goto]");
-    if (jumpLink && jumpLink.dataset.goto) {
-      showTab(jumpLink.dataset.goto);
-    }
-  });
-
-  if (logoutBtn) {
-    logoutBtn.addEventListener("click", handleLogoutClick);
-  }
-
-  document.addEventListener("click", function handleDialogCloser(event) {
-    const closer = event.target.closest("[data-close]");
-    if (closer) {
-      const dialog = closer.closest("dialog");
-      if (dialog) dialog.close();
-      return;
-    }
-    if (event.target instanceof HTMLDialogElement) {
-      event.target.close();
-    }
-  });
-
-  document.addEventListener("input", function handleDigitSanitizing(event) {
-    const input = event.target;
-    if (!(input instanceof HTMLInputElement) || !input.form) return;
-    if (input.name === "phone" || input.name === "pincode") {
-      input.value = input.value.replace(/\D/g, "");
-    }
-  });
+  // Step 2: Non-blocking data hydration from backend
+  await hydrateAccountData();
 }
 
 if (typeof document !== "undefined") {
-  initAccountPage();
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initAccountPage);
+  } else {
+    initAccountPage();
+  }
 }

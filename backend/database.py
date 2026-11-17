@@ -1,7 +1,6 @@
-import psycopg
 from psycopg_pool import ConnectionPool
 from psycopg.rows import dict_row
-from app.core.config import DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME
+from config import DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME
 from psycopg.conninfo import make_conninfo
 
 conninfo = make_conninfo(

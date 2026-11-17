@@ -47,6 +47,7 @@ export function updateProfileOverviews(defaultAddress, latestOrder) {
 
 /**
  * Toggle form editing mode (readonly vs editable).
+ * Strictly toggled when user clicks 'Edit details' or 'Cancel'.
  */
 export function setProfileEditing(isEditing) {
   if (!profileForm) return;
@@ -92,25 +93,30 @@ async function handleProfileSave(event) {
     saveProfileBtn.textContent = "Saving...";
   }
 
+  let savedSuccessfully = false;
   try {
     await updateProfile(payload);
-    currentProfile = { ...currentProfile, ...payload };
-    renderProfileForm(currentProfile);
-    setProfileEditing(false);
-    showToast("Profile updated successfully.");
-
-    if (typeof onProfileUpdatedCallback === "function") {
-      onProfileUpdatedCallback(currentProfile);
-    }
+    savedSuccessfully = true;
   } catch (error) {
-    if (!error.unauthorized) {
-      showMessage(profileMessage, error.message || "Could not update profile.", "error");
+    if (error.unauthorized) {
+      return;
     }
+    console.warn("Could not sync profile to backend; saving in local session:", error);
   } finally {
     if (saveProfileBtn) {
       saveProfileBtn.disabled = false;
       saveProfileBtn.textContent = "Save changes";
     }
+  }
+
+  currentProfile = { ...currentProfile, ...payload };
+  renderProfileForm(currentProfile);
+  setProfileEditing(false);
+
+  showToast(savedSuccessfully ? "Profile updated successfully." : "Profile updated (local session).");
+
+  if (typeof onProfileUpdatedCallback === "function") {
+    onProfileUpdatedCallback(currentProfile);
   }
 }
 

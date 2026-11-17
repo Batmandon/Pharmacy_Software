@@ -1,8 +1,8 @@
-from app.core.config import ENVIRONMENT
-from app.db.database import get_db
-from app.schemas.auth import RegisterAccount, LoginCredentials, UpdateProfile
-from app.services.jwt import create_access_token, create_refresh_token, decode_token
-from app.utils.utils import hash_password, verify_password
+from config import ENVIRONMENT
+from database import get_db
+from features.auth.auth_model import RegisterAccount, LoginCredentials, UpdateProfile
+from features.auth.jwtoken import create_access_token, create_refresh_token, decode_token
+from features.auth.utils import hash_password, verify_password
 from fastapi import Response, Request, HTTPException, Depends
 from typing import Literal
 

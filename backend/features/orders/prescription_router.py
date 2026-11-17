@@ -13,10 +13,10 @@ from fastapi import (
 )
 from pydantic import ValidationError
 
-from app.core.auth import get_current_user, require_admin
-from app.db.database import get_db
-from app.repositories.prescription import PrescriptionRepository
-from app.schemas.prescription import (
+from features.auth.auth_repo import get_current_user, require_admin
+from database import get_db
+from features.orders.prescription_repo import PrescriptionRepository
+from features.orders.prescription_model import (
     AdminPrescriptionResponse,
     AdminPrescriptionReview,
     CustomerPrescription,

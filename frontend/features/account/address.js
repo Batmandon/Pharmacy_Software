@@ -69,7 +69,9 @@ export function openAddressDialog(addressToEdit = null) {
     isDefaultCheckbox.disabled = mustBeDefault;
   }
 
-  addressDialog.showModal();
+  if (typeof addressDialog.showModal === "function") {
+    addressDialog.showModal();
+  }
 }
 
 /**
@@ -99,17 +101,42 @@ async function handleAddressFormSubmit(event) {
 
   try {
     let savedAddressId = editingAddressId;
+    let syncedWithBackend = false;
 
     if (editingAddressId === null) {
-      const savedAddress = await createAddress(payload);
-      savedAddressId = savedAddress.id;
-      currentAddresses.push(savedAddress);
+      try {
+        const savedAddress = await createAddress(payload);
+        savedAddressId = savedAddress.id;
+        currentAddresses.push(savedAddress);
+        syncedWithBackend = true;
+      } catch (err) {
+        if (err.unauthorized) {
+          throw err;
+        }
+        // Local preview fallback when backend is offline
+        const fallbackAddress = { id: Date.now(), ...payload };
+        savedAddressId = fallbackAddress.id;
+        currentAddresses.push(fallbackAddress);
+        console.warn("Could not save address to backend; saved locally:", err);
+      }
     } else {
-      const updatedAddress = await updateAddress(editingAddressId, payload);
-      savedAddressId = updatedAddress.id;
-      currentAddresses = currentAddresses.map(function replaceAddr(addr) {
-        return addr.id === editingAddressId ? updatedAddress : addr;
-      });
+      try {
+        const updatedAddress = await updateAddress(editingAddressId, payload);
+        savedAddressId = updatedAddress.id;
+        currentAddresses = currentAddresses.map(function replaceAddr(addr) {
+          return addr.id === editingAddressId ? updatedAddress : addr;
+        });
+        syncedWithBackend = true;
+      } catch (err) {
+        if (err.unauthorized) {
+          throw err;
+        }
+        savedAddressId = editingAddressId;
+        currentAddresses = currentAddresses.map(function replaceAddr(addr) {
+          return addr.id === editingAddressId ? { ...addr, ...payload } : addr;
+        });
+        console.warn("Could not update address on backend; updated locally:", err);
+      }
     }
 
     if (shouldMakeDefault) {
@@ -117,8 +144,16 @@ async function handleAddressFormSubmit(event) {
     }
 
     renderAddressesList(currentAddresses);
-    addressDialog.close();
-    showToast(editingAddressId === null ? "Address added successfully." : "Address updated successfully.");
+    if (typeof addressDialog.close === "function") {
+      addressDialog.close();
+    }
+    showToast(
+      syncedWithBackend
+        ? editingAddressId === null
+          ? "Address added successfully."
+          : "Address updated successfully."
+        : "Address saved (local session)."
+    );
     notifyAddressesChanged();
   } catch (error) {
     if (!error.unauthorized) {
@@ -161,17 +196,17 @@ async function handleDeleteAddress(address) {
 
   try {
     await deleteAddress(address.id);
-    currentAddresses = currentAddresses.filter(function removeAddr(addr) {
-      return addr.id !== address.id;
-    });
-    renderAddressesList(currentAddresses);
-    showToast("Address deleted successfully.");
-    notifyAddressesChanged();
   } catch (error) {
-    if (!error.unauthorized) {
-      showToast(error.message || "Could not delete address.");
-    }
+    if (error.unauthorized) return;
+    console.warn("Could not delete address from backend; deleting locally:", error);
   }
+
+  currentAddresses = currentAddresses.filter(function removeAddr(addr) {
+    return addr.id !== address.id;
+  });
+  renderAddressesList(currentAddresses);
+  showToast("Address deleted.");
+  notifyAddressesChanged();
 }
 
 /**

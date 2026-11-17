@@ -3,15 +3,23 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query
 import psycopg
 
 from database import get_db
+from features.auth.auth_repo import require_admin
 
 # db and models imports
-from backend.features.products.schemas import CreateBatch, EditBatch, ProductWithBatch, UpdateProductWithBatch
+from features.products.schemas import (
+    CreateBatch, EditBatch, ProductWithBatch, UpdateProductWithBatch, 
+    CreateBrand, EditBrand,
+    CreateCategory, EditCategory,
+    CreateManufacturer, EditManufacturer,
+    CreateSalt, EditSalt,
+    CreateSupplier, EditSupplier,)
 
 # Repositories import
-from repository_reads import ReadProductOperation
-from repository_writes import CrudProductOperation
+from features.products.repository_reads import ReadProductOperation
+from features.products.repository_writes import CrudProductOperation
 
 admin_router = APIRouter()
+
 
 # ============================================================================= #
 #                    Admin: product + first batch (one transaction)             #
@@ -155,6 +163,7 @@ def list_stock_alerts(conn=Depends(get_db)):
 
 
 @admin_router.get("")
+@admin_router.get("/products")
 def list_products(
     search: str | None = Query(None, max_length=100),
     page: int = Query(1, ge=1),
@@ -167,18 +176,207 @@ def list_products(
 
 # "counts" and "salt-strengths" must stay above "/{product_id}" so they are not read as an id.
 @admin_router.get("/counts")
+@admin_router.get("/products/counts")
 def get_counts(conn=Depends(get_db)):
     return ReadProductOperation(conn).get_counts()
 
 
 @admin_router.get("/salt-strengths")
+@admin_router.get("/products/salt-strengths")
 def get_salt_strengths(conn=Depends(get_db)):
     return ReadProductOperation(conn).salt_strengths()
 
 
 @admin_router.get("/{product_id}")
+@admin_router.get("/products/{product_id}")
 def get_product(product_id: int = Path(gt=0), conn=Depends(get_db)):
     product = ReadProductOperation(conn).get_product(product_id)
     if product is None:
         raise HTTPException(status_code=404, detail="Product not found.")
     return product
+
+# ============================================================================= #
+#                          Admin: Catalog Operations                            #
+# ============================================================================= #
+
+
+def _result_or_raise(result):
+    if "status_code" in result:
+        raise HTTPException(status_code=result["status_code"], detail=result["error"])
+    return result
+
+
+def _run(action):
+    """Run a repository call. The repository checks for duplicates first; the database's UNIQUE
+    rule still catches two requests that arrive at the same moment."""
+    try:
+        return _result_or_raise(action())
+    except psycopg.errors.UniqueViolation:
+        raise HTTPException(
+            status_code=409,
+            detail="A record with these unique value(s) already exists.",
+        )
+
+
+@admin_router.get("/categories")
+def list_categories(conn=Depends(get_db)):
+    return CrudProductOperation(conn).list_items("categories")
+
+
+@admin_router.post("/categories", status_code=201)
+def create_category(item: CreateCategory, conn=Depends(get_db)):
+    return _run(lambda: CrudProductOperation(conn).create_item("categories", item))
+
+
+@admin_router.patch("/categories/{item_id}")
+def edit_category(
+    item: EditCategory,
+    item_id: int = Path(ge=1),
+    conn=Depends(get_db),
+):
+    return _run(lambda: CrudProductOperation(conn).edit_item("categories", item_id, item))
+
+
+@admin_router.delete("/categories/{item_id}")
+def delete_category(
+    item_id: int = Path(ge=1),
+    conn=Depends(get_db),
+):
+    return _run(lambda: CrudProductOperation(conn).delete_item("categories", item_id))
+
+
+@admin_router.get("/brands")
+def list_brands(conn=Depends(get_db)):
+    return CrudProductOperation(conn).list_items("brands")
+
+
+@admin_router.post("/brands", status_code=201)
+def create_brand(item: CreateBrand, conn=Depends(get_db)):
+    return _run(lambda: CrudProductOperation(conn).create_item("brands", item))
+
+
+@admin_router.patch("/brands/{item_id}")
+def edit_brand(
+    item: EditBrand,
+    item_id: int = Path(ge=1),
+    conn=Depends(get_db),
+):
+    return _run(lambda: CrudProductOperation(conn).edit_item("brands", item_id, item))
+
+
+@admin_router.delete("/brands/{item_id}")
+def delete_brand(
+    item_id: int = Path(ge=1),
+    conn=Depends(get_db),
+):
+    return _run(lambda: CrudProductOperation(conn).delete_item("brands", item_id))
+
+
+@admin_router.get("/manufacturers")
+def list_manufacturers(conn=Depends(get_db)):
+    return CrudProductOperation(conn).list_items("manufacturers")
+
+
+@admin_router.post("/manufacturers", status_code=201)
+def create_manufacturer(item: CreateManufacturer, conn=Depends(get_db)):
+    return _run(lambda: CrudProductOperation(conn).create_item("manufacturers", item))
+
+
+@admin_router.patch("/manufacturers/{item_id}")
+def edit_manufacturer(
+    item: EditManufacturer,
+    item_id: int = Path(ge=1),
+    conn=Depends(get_db),
+):
+    return _run(lambda: CrudProductOperation(conn).edit_item("manufacturers", item_id, item))
+
+
+@admin_router.delete("/manufacturers/{item_id}")
+def delete_manufacturer(
+    item_id: int = Path(ge=1),
+    conn=Depends(get_db),
+):
+    return _run(lambda: CrudProductOperation(conn).delete_item("manufacturers", item_id))
+
+
+@admin_router.get("/suppliers")
+def list_suppliers(conn=Depends(get_db)):
+    return CrudProductOperation(conn).list_items("suppliers")
+
+
+@admin_router.post("/suppliers", status_code=201)
+def create_supplier(item: CreateSupplier, conn=Depends(get_db)):
+    return _run(lambda: CrudProductOperation(conn).create_item("suppliers", item))
+
+
+@admin_router.patch("/suppliers/{item_id}")
+def edit_supplier(
+    item: EditSupplier,
+    item_id: int = Path(ge=1),
+    conn=Depends(get_db),
+):
+    return _run(lambda: CrudProductOperation(conn).edit_item("suppliers", item_id, item))
+
+
+@admin_router.delete("/suppliers/{item_id}")
+def delete_supplier(
+    item_id: int = Path(ge=1),
+    conn=Depends(get_db),
+):
+    return _run(lambda: CrudProductOperation(conn).delete_item("suppliers", item_id))
+
+
+@admin_router.get("/salts")
+def list_salts(conn=Depends(get_db)):
+    return CrudProductOperation(conn).list_items("salts")
+
+
+@admin_router.post("/salts", status_code=201)
+def create_salt(item: CreateSalt, conn=Depends(get_db)):
+    return _run(lambda: CrudProductOperation(conn).create_item("salts", item))
+
+
+@admin_router.patch("/salts/{item_id}")
+def edit_salt(
+    item: EditSalt,
+    item_id: int = Path(ge=1),
+    conn=Depends(get_db),
+):
+    return _run(lambda: CrudProductOperation(conn).edit_item("salts", item_id, item))
+
+
+@admin_router.delete("/salts/{item_id}")
+def delete_salt(
+    item_id: int = Path(ge=1),
+    conn=Depends(get_db),
+):
+    return _run(lambda: CrudProductOperation(conn).delete_item("salts", item_id))
+
+
+@admin_router.get("/expired")
+@admin_router.get("/expiry/expired")
+def expired(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    conn=Depends(get_db),
+):
+    return ReadProductOperation(conn).list_expiry(
+        expired=True,
+        page=page,
+        page_size=page_size,
+    )
+
+@admin_router.get("/expiring")
+@admin_router.get("/expiry/expiring")
+def expiring(
+    days: int = Query(90, ge=1, le=3650),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    conn=Depends(get_db),
+):
+    return ReadProductOperation(conn).list_expiry(
+        expired=False,
+        within_days=days,
+        page=page,
+        page_size=page_size,
+    )

@@ -3,7 +3,7 @@ import logging
 import psycopg
 from fastapi import APIRouter, HTTPException, Depends, Path, Query
 from database import get_db
-from repository_reads import ReadProductOperation
+from features.products.repository_reads import ReadProductOperation
 
 
 customer_router = APIRouter()

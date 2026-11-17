@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
-from backend.features.products.routes_customer import customer_router
-from backend.features.products.routes_admin import admin_router
-from core.auth import require_admin
+from features.products.routes_customer import customer_router
+from features.products.routes_admin import admin_router
+from features.auth.auth_repo import require_admin
 
 # MASTER ROUTER 
 products_feature_router = APIRouter()

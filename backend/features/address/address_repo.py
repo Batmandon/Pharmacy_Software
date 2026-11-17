@@ -1,4 +1,4 @@
-from app.schemas.address import CreateAddress, UpdateAddress
+from features.address.address_model import CreateAddress, UpdateAddress
 
 MAX_ADDRESSES = 3
 

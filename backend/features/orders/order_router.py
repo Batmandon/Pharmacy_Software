@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, Path, status, Query
-from app.core.auth import get_current_user, require_admin
-from app.db.database import get_db
-from app.repositories.admin_products import AdminProductRepository
-from app.repositories.order import (
+from features.auth.auth_repo import get_current_user, require_admin
+from database import get_db
+from features.products.repository_reads import ReadProductOperation
+from features.orders.order_repo import (
     AddressNotFound,
     EmptyCart,
     MissingBatchPrice,
@@ -10,7 +10,7 @@ from app.repositories.order import (
     OutOfStock,
     PrescriptionRequired,
 )
-from app.schemas.order import AddCartItem, OrderStatus, PlaceOrder, UpdateOrderStatus
+from features.orders.order_model import AddCartItem, OrderStatus, PlaceOrder, UpdateOrderStatus
 
 import logging
 import psycopg
@@ -148,6 +148,7 @@ def place_order(
 
 
 @router.get("")
+@router.get("/account/orders")
 def my_orders(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
@@ -223,7 +224,7 @@ admin_router = APIRouter(
 def dashboard(conn=Depends(get_db)):
     try:
         stats = OrderRepository(conn).get_dashboard_stats()
-        counts = AdminProductRepository(conn).get_counts()
+        counts = ReadProductOperation(conn).get_counts()
     except psycopg.Error:
         logger.exception("dashboard failed")
         raise HTTPException(status_code=500, detail="Could not load dashboard")
@@ -245,6 +246,22 @@ def admin_list_orders(
     except psycopg.Error:
         logger.exception("admin_list_orders failed")
         raise HTTPException(status_code=500, detail="Could not fetch orders")
+
+
+@admin_router.get("/orders/{order_id}")
+def admin_get_order(
+    order_id: int = Path(gt=0),
+    conn=Depends(get_db),
+):
+    try:
+        order = OrderRepository(conn).get_order_admin(order_id)
+    except psycopg.Error:
+        logger.exception("admin_get_order failed")
+        raise HTTPException(status_code=500, detail="Could not fetch order")
+
+    if order is None:
+        raise HTTPException(status_code=404, detail="Order not found")
+    return order
 
 
 @admin_router.patch("/orders/{order_id}/status")

@@ -97,6 +97,10 @@ export function showCatalogEmptyState(message, isError = false) {
     emptyState.hidden = false;
     emptyState.classList.toggle("error-state", isError);
     emptyState.classList.toggle("catalog-error-state", isError);
+    const icon = emptyState.querySelector(".empty-icon i");
+    if (icon) {
+      icon.className = isError ? "fa-solid fa-triangle-exclamation" : "fa-solid fa-box-open";
+    }
     const h2 = emptyState.querySelector("h2");
     const p = emptyState.querySelector("p");
     if (h2) h2.textContent = isError ? "Products could not be loaded" : "No products found";

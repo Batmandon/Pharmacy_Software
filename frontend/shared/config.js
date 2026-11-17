@@ -14,11 +14,14 @@
 const isLocalhost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
 
 window.APP_CONFIG = {
-  API_BASE_URL: isLocalhost ? `http://${window.location.hostname}:8000` : "/api",
+  API_BASE_URL: isLocalhost ? `http://${window.location.hostname}:8000/api` : "/api",
 };
 
 const apiBaseUrl = new URL(window.APP_CONFIG.API_BASE_URL, window.location.href);
-const refreshTokenUrl = new URL("/auth_routes/refresh_token", apiBaseUrl);
+const refreshTokenUrl = new URL(
+  `${apiBaseUrl.pathname.replace(/\/+$/, "")}/auth_routes/refresh_token`,
+  apiBaseUrl.origin
+);
 const originalFetch = window.fetch.bind(window);
 
 // Tracks any active refresh promise to avoid duplicate concurrent refresh requests

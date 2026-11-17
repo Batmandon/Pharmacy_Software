@@ -4,12 +4,44 @@
  * Shared card styling, catalog grid, search results, filters, pagination & states.
  */
 
-/* ==================== CATALOG & SEARCH LAYOUT ==================== */
+/* ==================== BREADCRUMB & LAYOUT ==================== */
+.breadcrumb-container {
+  max-width: var(--container-max-width, 1200px);
+  width: 100%;
+  margin: 1.25rem auto 0;
+  padding: 0 1.5rem;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 0.5rem);
+  font-size: var(--font-size-sm, 0.875rem);
+  color: var(--color-text-muted, #64748b);
+}
+
+.breadcrumb a {
+  color: var(--color-primary, #0d9488);
+  font-weight: var(--font-weight-medium, 500);
+  text-decoration: none;
+  transition: color var(--transition-fast, 150ms ease);
+}
+
+.breadcrumb a:hover {
+  text-decoration: underline;
+  color: var(--color-primary-dark, #0b7c72);
+}
+
+.breadcrumb i {
+  font-size: 0.65rem;
+  color: var(--color-text-light, #94a3b8);
+}
+
 .shop-container,
 .page {
   max-width: var(--container-max-width, 1200px);
   width: 100%;
-  margin: 1.5rem auto 4rem;
+  margin: 1.25rem auto 4rem;
   padding: 0 1.5rem;
   flex: 1;
 }
@@ -428,7 +460,12 @@
   background: var(--color-surface, #ffffff);
   border: 1px dashed var(--color-border, #dde5ec);
   border-radius: var(--radius-xl, 1rem);
-  padding: 3.5rem 1.5rem;
+  padding: 4.5rem 2rem;
+  min-height: 25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 .empty-state[hidden],

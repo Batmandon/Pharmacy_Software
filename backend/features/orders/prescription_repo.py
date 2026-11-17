@@ -1,5 +1,5 @@
-from app.core.auth import get_user
-from app.schemas.prescription import AdminPrescriptionReview
+from features.auth.auth_repo import get_user
+from features.orders.prescription_model import AdminPrescriptionReview
 
 
 class PrescriptionRepository:

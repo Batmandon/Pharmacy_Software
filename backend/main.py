@@ -1,11 +1,22 @@
+import sys
 import time
 from contextlib import asynccontextmanager
+from pathlib import Path
+
+# Ensure backend directory is always in sys.path
+BACKEND_DIR = Path(__file__).resolve().parent
+if str(BACKEND_DIR) not in sys.path:
+    sys.path.insert(0, str(BACKEND_DIR))
 
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from features.products.routes import products_feature_router
-from core.config import FRONTEND_ORIGINS
-from core.db.database import init_db, pool
+from features.auth.auth_routes import router as auth_router
+from features.address.address_router import router as address_router
+from features.orders.order_router import router as order_router, admin_router as admin_order_router
+from features.orders.prescription_router import router as prescription_router
+from config import FRONTEND_ORIGINS
+from database import init_db, pool
 
 
 @asynccontextmanager
@@ -46,3 +57,27 @@ app.include_router(
     prefix="/api",
 )
 
+app.include_router(
+    auth_router,
+    prefix="/api",
+)
+
+app.include_router(
+    address_router,
+    prefix="/api",
+)
+
+app.include_router(
+    order_router,
+    prefix="/api",
+)
+
+app.include_router(
+    admin_order_router,
+    prefix="/api",
+)
+
+app.include_router(
+    prescription_router,
+    prefix="/api",
+)

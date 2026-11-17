@@ -1,7 +1,7 @@
 import logging
 import psycopg
 from fastapi import APIRouter, HTTPException, Request, Response, Depends
-from app.core.auth import (
+from features.auth.auth_repo import (
     create_account,
     get_current_user,
     get_profile,
@@ -10,8 +10,8 @@ from app.core.auth import (
     refresh_access_token,
     update_profile,
 )
-from app.db.database import get_db
-from app.schemas.auth import RegisterAccount, LoginCredentials, UpdateProfile
+from database import get_db
+from features.auth.auth_model import RegisterAccount, LoginCredentials, UpdateProfile
 
 router = APIRouter(prefix="/auth_routes", tags=["authentication"])
 logger = logging.getLogger(__name__)
