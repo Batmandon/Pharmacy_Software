@@ -17,7 +17,7 @@ class NewBatch(BaseModel):
     quantity: int = Field(ge=0)
     purchase_price: Decimal | None = Field(default=None, ge=0, max_digits=10, decimal_places=2)
     mrp: Decimal | None = Field(default=None, ge=0, max_digits=10, decimal_places=2)
-    discount_percent: Decimal = Field(default=0, ge=0, le=100, max_digits=5, decimal_places=2)
+    discount_percent: Decimal = Field(default=Decimal("0"), ge=0, le=100, max_digits=5, decimal_places=2)
     supplier_id: int | None = Field(default=None, gt=0)
     rack_location: str | None = Field(default=None, max_length=100)
 
@@ -111,19 +111,19 @@ class ProductSaltInput(BaseModel):
 class AddProduct(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
-    name: str = Field(min_length=1, max_length=20)
+    name: str = Field(min_length=1, max_length=100)
     salts: list[ProductSaltInput] = Field(min_length=1)
     category_id: int = Field(gt=0)
     form: FormType
-    pack_size: str = Field(max_length=20)
+    pack_size: str = Field(max_length=50)
     manufacturer_id: int = Field(gt=0)
     brand_id: Optional[int] = Field(default=None, gt=0)  # Generic medicines have no brand.
-    schedule: ScheduleType
-    gst_percent: float = Field(ge=0, le=99.99)
-    hsn_code: str = Field(max_length=20)
-    storage_condition: str = Field(max_length=100)
-    description: str = Field(max_length=500)
-    image_url: str = Field(max_length=200)
+    schedule: ScheduleType = "OTC"
+    gst_percent: float = Field(default=12.0, ge=0, le=99.99)
+    hsn_code: Optional[str] = Field(default=None, max_length=20)
+    storage_condition: Optional[str] = Field(default=None, max_length=100)
+    description: Optional[str] = Field(default=None, max_length=500)
+    image_url: Optional[str] = Field(default=None, max_length=200)
 
     @model_validator(mode="after")
     def validate_salts(self):
@@ -135,11 +135,11 @@ class UpdateProduct(BaseModel):
     """Partial update: only the fields that are sent get changed."""
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
-    name: Optional[str] = Field(default=None, min_length=1, max_length=20)
+    name: Optional[str] = Field(default=None, min_length=1, max_length=100)
     salts: Optional[list[ProductSaltInput]] = Field(default=None, min_length=1)
     category_id: Optional[int] = Field(default=None, gt=0)
     form: Optional[FormType] = None
-    pack_size: Optional[str] = Field(default=None, max_length=20)
+    pack_size: Optional[str] = Field(default=None, max_length=50)
     manufacturer_id: Optional[int] = Field(default=None, gt=0)
     brand_id: Optional[int] = Field(default=None, gt=0)  # Sending null removes the brand.
     schedule: Optional[ScheduleType] = None

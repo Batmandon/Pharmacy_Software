@@ -14,10 +14,7 @@ import { request, DASHBOARD_PATHS, DASHBOARD_CONFIG, setAlertsStale } from "./ap
 import { loadDashboardStats } from "./profile.js";
 
 // Validation patterns matching backend schema rules
-const HSN_CODE = /^[1-9]\d{3,7}$/;
-const GST_RATES = ["0", "5", "12", "18", "28"];
-const STORAGE_CONDITIONS = ["room_temperature", "refrigerated", "cool_and_dry", "protect_from_light"];
-const SCHEDULES = ["none", "H", "H1", "X", "G"];
+const SCHEDULES = ["OTC", "H", "H1", "X"];
 const MONEY = /^\d+(\.\d{1,2})?$/;
 const PERCENT = /^\d+(\.\d{1,2})?$/;
 
@@ -127,10 +124,11 @@ function setFieldError(input, message) {
   const field = input.closest(".field") || input.closest(".select-add") || input.parentElement;
   if (!field) return;
 
-  let hint = field.querySelector(".field-error");
+  field.classList.toggle("invalid", Boolean(message));
+  let hint = field.querySelector(".error, .field-error");
   if (!hint && message) {
-    hint = document.createElement("p");
-    hint.className = "field-error";
+    hint = document.createElement("small");
+    hint.className = "error";
     field.append(hint);
   }
   if (hint) {
@@ -144,8 +142,8 @@ function clearFormErrors(form) {
   form.querySelectorAll(".invalid").forEach(function removeInvalidClass(element) {
     element.classList.remove("invalid");
   });
-  form.querySelectorAll(".field-error").forEach(function removeErrorHint(element) {
-    element.remove();
+  form.querySelectorAll(".error, .field-error").forEach(function clearErrorHint(element) {
+    element.textContent = "";
   });
 }
 
@@ -181,7 +179,7 @@ export function validateProductForm(values) {
   if (!values.name) {
     errors.name = "Enter a product name.";
   }
-  checkLengthLimit(errors, values, "name", 200, "Name");
+  checkLengthLimit(errors, values, "name", 100, "Name");
 
   if (!values.category_id) {
     errors.category_id = "Pick a category.";
@@ -190,8 +188,8 @@ export function validateProductForm(values) {
     errors.manufacturer_id = "Pick a manufacturer.";
   }
 
-  if (values.hsn_code && !HSN_CODE.test(values.hsn_code)) {
-    errors.hsn_code = "HSN code must be 4 to 8 digits.";
+  if (!values.form) {
+    errors.form = "Pick a medicine form.";
   }
 
   if (!values.pack_size) {
@@ -199,14 +197,29 @@ export function validateProductForm(values) {
   }
   checkLengthLimit(errors, values, "pack_size", 50, "Pack size");
 
-  if (!STORAGE_CONDITIONS.includes(values.storage_condition)) {
-    errors.storage_condition = "Pick a storage condition.";
-  }
-  if (!SCHEDULES.includes(values.schedule)) {
+  if (!values.schedule || !SCHEDULES.includes(values.schedule)) {
     errors.schedule = "Pick a schedule.";
   }
-  if (!GST_RATES.includes(values.gst_rate)) {
-    errors.gst_rate = "Pick a GST rate.";
+
+  if (
+    values.gst_percent === "" ||
+    isNaN(Number(values.gst_percent)) ||
+    Number(values.gst_percent) < 0 ||
+    Number(values.gst_percent) > 99.99
+  ) {
+    errors.gst_percent = "Enter a GST percent between 0 and 99.99.";
+  }
+
+  if (values.hsn_code) {
+    checkLengthLimit(errors, values, "hsn_code", 20, "HSN code");
+  }
+
+  if (values.storage_condition) {
+    checkLengthLimit(errors, values, "storage_condition", 100, "Storage condition");
+  }
+
+  if (values.description) {
+    checkLengthLimit(errors, values, "description", 500, "Description");
   }
 
   if (values.image_url) {
@@ -218,8 +231,8 @@ export function validateProductForm(values) {
     } catch (urlError) {
       errors.image_url = "Enter a valid web address.";
     }
+    checkLengthLimit(errors, values, "image_url", 200, "Image URL");
   }
-  checkLengthLimit(errors, values, "image_url", 500, "Image URL");
 
   return errors;
 }
@@ -230,10 +243,10 @@ export function validateBatchForm(values) {
   if (!values.batch_no) {
     errors.batch_no = "Enter a batch number.";
   }
-  checkLengthLimit(errors, values, "batch_no", 50, "Batch number");
+  checkLengthLimit(errors, values, "batch_no", 100, "Batch number");
 
-  if (!values.quantity || !/^[1-9]\d*$/.test(values.quantity)) {
-    errors.quantity = "Enter a whole number of units (at least 1).";
+  if (values.quantity === "" || !/^\d+$/.test(values.quantity)) {
+    errors.quantity = "Enter a valid whole number (e.g. 0, 10, 100).";
   }
 
   const today = getTodayIsoString();
@@ -249,17 +262,20 @@ export function validateBatchForm(values) {
     errors.expiry_date = "Expiry date must be after the manufacture date.";
   }
 
-  if (values.mrp && !MONEY.test(values.mrp)) {
+  if (values.mrp && (!MONEY.test(values.mrp) || Number(values.mrp) < 0)) {
     errors.mrp = "Enter a valid MRP (e.g. 50 or 49.99).";
   }
-  if (values.purchase_price && !MONEY.test(values.purchase_price)) {
+  if (values.purchase_price && (!MONEY.test(values.purchase_price) || Number(values.purchase_price) < 0)) {
     errors.purchase_price = "Enter a valid purchase price.";
   }
   if (values.purchase_price && values.mrp && Number(values.purchase_price) > Number(values.mrp)) {
     errors.purchase_price = "Purchase price cannot be more than MRP.";
   }
 
-  if (values.discount_percent && (!PERCENT.test(values.discount_percent) || Number(values.discount_percent) > 100)) {
+  if (
+    values.discount_percent &&
+    (!PERCENT.test(values.discount_percent) || Number(values.discount_percent) < 0 || Number(values.discount_percent) > 100)
+  ) {
     errors.discount_percent = "Enter a percentage value from 0 to 100.";
   }
 
@@ -277,9 +293,9 @@ function buildBatchPayload(values) {
     quantity: Number(values.quantity),
     mfg_date: values.mfg_date || null,
     expiry_date: values.expiry_date,
-    purchase_price: values.purchase_price || null,
-    mrp: values.mrp || null,
-    discount_percent: values.discount_percent || "0",
+    purchase_price: values.purchase_price !== "" && values.purchase_price != null ? Number(values.purchase_price) : null,
+    mrp: values.mrp !== "" && values.mrp != null ? Number(values.mrp) : null,
+    discount_percent: values.discount_percent !== "" && values.discount_percent != null ? Number(values.discount_percent) : 0,
     supplier_id: values.supplier_id ? Number(values.supplier_id) : null,
     rack_location: values.rack_location || null,
   };
@@ -855,8 +871,8 @@ export async function openProductDialog(mode, product = null) {
 
   if (mode === "edit" && product) {
     const fields = [
-      "name", "category_id", "manufacturer_id", "brand_id", "hsn_code",
-      "pack_size", "storage_condition", "schedule", "gst_rate", "description", "image_url",
+      "name", "category_id", "manufacturer_id", "brand_id", "form", "hsn_code",
+      "pack_size", "storage_condition", "schedule", "gst_percent", "description", "image_url",
     ];
     for (const field of fields) {
       if (form.elements[field]) {
@@ -871,9 +887,10 @@ export async function openProductDialog(mode, product = null) {
     salts.forEach(addSaltRow);
   } else {
     if (form.elements["is_active"]) form.elements["is_active"].checked = true;
-    if (form.elements["storage_condition"]) form.elements["storage_condition"].value = "room_temperature";
-    if (form.elements["schedule"]) form.elements["schedule"].value = "none";
-    if (form.elements["gst_rate"]) form.elements["gst_rate"].value = "12";
+    if (form.elements["form"]) form.elements["form"].value = "Tablet";
+    if (form.elements["storage_condition"]) form.elements["storage_condition"].value = "Store in a cool, dry place";
+    if (form.elements["schedule"]) form.elements["schedule"].value = "OTC";
+    if (form.elements["gst_percent"]) form.elements["gst_percent"].value = "12";
     addSaltRow();
   }
 }
@@ -1171,14 +1188,14 @@ export function initProducts() {
         category_id: (formData.get("category_id") || "").toString(),
         manufacturer_id: (formData.get("manufacturer_id") || "").toString(),
         brand_id: (formData.get("brand_id") || "").toString(),
-        hsn_code: (formData.get("hsn_code") || "").toString().trim(),
+        form: (formData.get("form") || "").toString().trim(),
         pack_size: (formData.get("pack_size") || "").toString().trim(),
-        storage_condition: (formData.get("storage_condition") || "").toString(),
-        schedule: (formData.get("schedule") || "").toString(),
-        gst_rate: (formData.get("gst_rate") || "").toString(),
+        schedule: (formData.get("schedule") || "").toString().trim(),
+        gst_percent: (formData.get("gst_percent") || "").toString().trim(),
+        hsn_code: (formData.get("hsn_code") || "").toString().trim(),
+        storage_condition: (formData.get("storage_condition") || "").toString().trim(),
         description: (formData.get("description") || "").toString().trim(),
         image_url: (formData.get("image_url") || "").toString().trim(),
-        is_active: formData.get("is_active") === "on",
       };
 
       const productErrors = validateProductForm(productValues);
@@ -1188,15 +1205,15 @@ export function initProducts() {
       let batchErrors = {};
       if (productDialogState.mode === "add") {
         batchValues = {
-          batch_no: (formData.get("b_no") || "").toString().trim(),
-          quantity: (formData.get("b_qty") || "").toString().trim(),
-          mfg_date: (formData.get("b_mfg") || "").toString(),
-          expiry_date: (formData.get("b_exp") || "").toString(),
-          purchase_price: (formData.get("b_purchase") || "").toString().trim(),
-          mrp: (formData.get("b_mrp") || "").toString().trim(),
-          discount_percent: (formData.get("b_discount") || "").toString().trim(),
-          supplier_id: (formData.get("b_supplier") || "").toString(),
-          rack_location: (formData.get("b_rack") || "").toString().trim(),
+          batch_no: (formData.get("batch_no") || formData.get("b_no") || "").toString().trim(),
+          quantity: (formData.get("quantity") || formData.get("b_qty") || "").toString().trim(),
+          mfg_date: (formData.get("mfg_date") || formData.get("b_mfg") || "").toString(),
+          expiry_date: (formData.get("expiry_date") || formData.get("b_exp") || "").toString(),
+          purchase_price: (formData.get("purchase_price") || formData.get("b_purchase") || "").toString().trim(),
+          mrp: (formData.get("mrp") || formData.get("b_mrp") || "").toString().trim(),
+          discount_percent: (formData.get("discount_percent") || formData.get("b_discount") || "").toString().trim(),
+          supplier_id: (formData.get("supplier_id") || formData.get("b_supplier") || "").toString(),
+          rack_location: (formData.get("rack_location") || formData.get("b_rack") || "").toString().trim(),
         };
         batchErrors = validateBatchForm(batchValues);
       }
@@ -1214,14 +1231,14 @@ export function initProducts() {
         category_id: Number(productValues.category_id),
         manufacturer_id: Number(productValues.manufacturer_id),
         brand_id: productValues.brand_id ? Number(productValues.brand_id) : null,
-        hsn_code: productValues.hsn_code || null,
+        form: productValues.form,
         pack_size: productValues.pack_size,
-        storage_condition: productValues.storage_condition,
         schedule: productValues.schedule,
-        gst_rate: productValues.gst_rate,
+        gst_percent: Number(productValues.gst_percent),
+        hsn_code: productValues.hsn_code || null,
+        storage_condition: productValues.storage_condition || null,
         description: productValues.description || null,
         image_url: productValues.image_url || null,
-        is_active: productValues.is_active,
         salts,
       };
 
@@ -1239,7 +1256,7 @@ export function initProducts() {
           showToast("Product added");
         } else {
           await request("PUT", `${DASHBOARD_PATHS.productsWrite}/${productDialogState.id}`, {
-            body: payload,
+            body: { product: payload },
           });
           showToast("Product updated");
         }
