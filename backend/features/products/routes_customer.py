@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 def list_products(page: int = Query(1, ge=1),
                   page_size: int = Query(20, ge=1, le=100),
                   conn=Depends(get_db)):
-    return ReadProductOperation(conn).list_products(page, page_size)
+    return ReadProductOperation(conn).list_products(page, page_size, is_customer=True)
 
 @customer_router.get("/products/search")
 def search_products(
@@ -30,7 +30,7 @@ def search_products(
     name = name.strip()
     if not name:
         raise HTTPException(status_code=422, detail="Search name cannot be blank")
-    result = ReadProductOperation(conn).search_products(name, page, page_size)
+    result = ReadProductOperation(conn).search_products(name, page, page_size, is_customer=True)
     if result["total"] == 0:
         raise HTTPException(
             status_code=404,

@@ -160,6 +160,7 @@ class ProductQueryBuilder:
                     selling_price(item["mrp"], item["discount_percent"]) 
                     if item["mrp"] is not None else None
                 )
+                item["price"] = item["selling_price"]
 
         return {"items": items, "page": self.page, "page_size": self.page_size, "total": total}
 

@@ -161,8 +161,6 @@ def delete_batch(batch_id: int, conn=Depends(get_db)):
 def list_stock_alerts(conn=Depends(get_db)):
     return ReadProductOperation(conn).list_stock_alerts()
 
-
-@admin_router.get("")
 @admin_router.get("/products")
 def list_products(
     search: str | None = Query(None, max_length=100),
@@ -175,17 +173,14 @@ def list_products(
 
 # "counts" and "salt-strengths" must stay above "/{product_id}" so they are not read as an id.
 
-@admin_router.get("/counts")
 @admin_router.get("/products/counts")
 def get_counts(conn=Depends(get_db)):
     return ReadProductOperation(conn).get_counts()
 
-@admin_router.get("/salt-strengths")
 @admin_router.get("/products/salt-strengths")
 def get_salt_strengths(conn=Depends(get_db)):
     return ReadProductOperation(conn).salt_strengths()
 
-@admin_router.get("/{product_id}")
 @admin_router.get("/products/{product_id}")
 def get_product(product_id: int = Path(gt=0), conn=Depends(get_db)):
     product = ReadProductOperation(conn).get_product(product_id)
@@ -350,7 +345,6 @@ def delete_salt(
 ):
     return _run(lambda: CrudProductOperation(conn).delete_item("salts", item_id))
 
-@admin_router.get("/expired")
 @admin_router.get("/expiry/expired")
 def expired(
     page: int = Query(1, ge=1),
@@ -363,7 +357,6 @@ def expired(
         page_size=page_size,
     )
 
-@admin_router.get("/expiring")
 @admin_router.get("/expiry/expiring")
 def expiring(
     days: int = Query(90, ge=1, le=3650),
