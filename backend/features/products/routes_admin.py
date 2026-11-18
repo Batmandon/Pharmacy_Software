@@ -163,13 +163,13 @@ def list_stock_alerts(conn=Depends(get_db)):
 
 @admin_router.get("/products")
 def list_products(
-    search: str | None = Query(None, max_length=100),
+    # search: str | None = Query(None, max_length=100),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     conn=Depends(get_db),
 ):
-    search = search.strip() if search else None
-    return ReadProductOperation(conn).list_products(search or None, page, page_size)
+    # search = search.strip() if search else None
+    return ReadProductOperation(conn).list_products(page, page_size)
 
 # "counts" and "salt-strengths" must stay above "/{product_id}" so they are not read as an id.
 
