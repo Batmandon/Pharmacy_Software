@@ -56,6 +56,7 @@ export function isValidCatalogProduct(product) {
 }
 
 export function isValidProductDetails(product, expectedProductId) {
+  const price = product?.price ?? product?.selling_price;
   return (
     product !== null &&
     typeof product === "object" &&
@@ -64,7 +65,7 @@ export function isValidProductDetails(product, expectedProductId) {
     typeof product.name === "string" &&
     product.name.trim().length > 0 &&
     ["In Stock", "Out of Stock"].includes(product.stock_status) &&
-    (product.price === null || getAmount(product.price) !== null) &&
+    (price === null || price === undefined || getAmount(price) !== null) &&
     isOptionalText(product.brand) &&
     isOptionalText(product.category) &&
     isOptionalText(product.strength) &&
@@ -190,7 +191,7 @@ export async function fetchProductDetails(productId) {
     throw new Error("Product ID is missing or invalid.");
   }
 
-  const endpoint = new URL(`${apiBaseUrl}/products/${encodeURIComponent(id)}/details`, getBaseOrigin());
+  const endpoint = new URL(`${apiBaseUrl}/products/${id}`, getBaseOrigin());
   const fetchFn = typeof window !== "undefined" ? window.fetch : globalThis.fetch;
   const response = await fetchFn(endpoint);
   const product = await readResponse(response);

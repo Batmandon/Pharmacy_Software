@@ -38,13 +38,14 @@ def search_products(
         )
     return result
 
+@customer_router.get("/products/{product_id}")
 @customer_router.get("/products/{product_id}/details")
 def get_product_details(
     product_id: int = Path(gt=0),
     conn=Depends(get_db),
 ):
     try:
-        product = ReadProductOperation(conn).get_product_details(product_id)
+        product = ReadProductOperation(conn).get_product(product_id, is_customer_query=True)
     except psycopg.Error:
         logger.exception("get_product_details failed")
         raise HTTPException(

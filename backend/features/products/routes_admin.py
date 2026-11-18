@@ -173,19 +173,17 @@ def list_products(
     search = search.strip() if search else None
     return ReadProductOperation(conn).list_products(search or None, page, page_size)
 
-
 # "counts" and "salt-strengths" must stay above "/{product_id}" so they are not read as an id.
+
 @admin_router.get("/counts")
 @admin_router.get("/products/counts")
 def get_counts(conn=Depends(get_db)):
     return ReadProductOperation(conn).get_counts()
 
-
 @admin_router.get("/salt-strengths")
 @admin_router.get("/products/salt-strengths")
 def get_salt_strengths(conn=Depends(get_db)):
     return ReadProductOperation(conn).salt_strengths()
-
 
 @admin_router.get("/{product_id}")
 @admin_router.get("/products/{product_id}")
@@ -351,7 +349,6 @@ def delete_salt(
     conn=Depends(get_db),
 ):
     return _run(lambda: CrudProductOperation(conn).delete_item("salts", item_id))
-
 
 @admin_router.get("/expired")
 @admin_router.get("/expiry/expired")

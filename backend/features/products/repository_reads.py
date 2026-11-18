@@ -234,6 +234,7 @@ class ReadProductOperation:
                 selling_price(product["mrp"], product["discount_percent"])
                 if product["mrp"] is not None else None
             )
+            product["price"] = product["selling_price"]
 
         return product
 
