@@ -61,7 +61,20 @@ class ProductQueryBuilder:
     def for_admin(self):
         self._mode = "admin"
         self._select_cols += """,
+            p.category_id,
+            p.manufacturer_id,
+            p.brand_id,
+            p.gst_percent,
+            p.hsn_code,
+            p.storage_condition,
+            p.description,
             p.is_active,
+            COALESCE(
+                (SELECT json_agg(json_build_object('salt_id', ps.salt_id, 'name', s.name, 'strength', ps.strength) ORDER BY ps.id)
+                 FROM product_salts ps JOIN salts s ON s.id = ps.salt_id
+                 WHERE ps.product_id = p.id),
+                '[]'::json
+            ) AS salts,
             COALESCE(bs.total_stock, 0) AS total_stock,
             bs.nearest_expiry,
             bs.batches

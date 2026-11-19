@@ -436,7 +436,15 @@ export function readSalts() {
   return { salts, error: errorMessage };
 }
 
-export async function loadLookups() {
+export async function loadLookups(force = false) {
+  if (
+    !force &&
+    lookups.categories.length > 0 &&
+    lookups.manufacturers.length > 0 &&
+    lookups.salts.length > 0
+  ) {
+    return;
+  }
   const [cats, mans, brands, suppliers, salts, strengths] = await Promise.allSettled([
     request("GET", DASHBOARD_PATHS.categories, { allowArray: true }),
     request("GET", DASHBOARD_PATHS.manufacturers, { allowArray: true }),
@@ -469,7 +477,10 @@ export async function loadLookups() {
   );
 }
 
-export async function loadSuppliers() {
+export async function loadSuppliers(force = false) {
+  if (!force && lookups.suppliers.length > 0) {
+    return;
+  }
   const supplierResult = await request("GET", DASHBOARD_PATHS.suppliers, { allowArray: true });
   lookups.suppliers = normalizeLookupList({ value: supplierResult });
 }
@@ -854,44 +865,68 @@ export async function openProductDialog(mode, product = null) {
     dialog.showModal();
   }
 
-  try {
-    await loadLookups();
-  } catch (error) {
-    if (!error.redirecting) {
-      setDialogMessage(message, `Could not load categories and manufacturers. ${error.message}`);
+  function fillProductForm() {
+    populateSelectDropdown(form.elements["category_id"], lookups.categories, LOOKUP_LABELS.categories);
+    populateSelectDropdown(form.elements["manufacturer_id"], lookups.manufacturers, LOOKUP_LABELS.manufacturers);
+    populateSelectDropdown(form.elements["brand_id"], lookups.brands, LOOKUP_LABELS.brands, NO_CHOICE_LABELS.brands);
+    populateSelectDropdown(form.elements["supplier_id"], lookups.suppliers, LOOKUP_LABELS.suppliers, NO_CHOICE_LABELS.suppliers);
+    refreshSaltDatalist();
+
+    if (mode === "edit" && product) {
+      const fields = [
+        "name", "category_id", "manufacturer_id", "brand_id", "form", "hsn_code",
+        "pack_size", "storage_condition", "schedule", "gst_percent", "description", "image_url",
+      ];
+      for (const field of fields) {
+        if (form.elements[field]) {
+          form.elements[field].value = product[field] != null ? String(product[field]) : "";
+        }
+      }
+
+      // Name-based fallback matching if IDs are not present
+      if (form.elements["category_id"] && !form.elements["category_id"].value && product.category) {
+        const match = lookups.categories.find(c => c.name.toLowerCase() === String(product.category).toLowerCase());
+        if (match) form.elements["category_id"].value = String(match.id);
+      }
+      if (form.elements["manufacturer_id"] && !form.elements["manufacturer_id"].value && product.manufacturer) {
+        const match = lookups.manufacturers.find(m => m.name.toLowerCase() === String(product.manufacturer).toLowerCase());
+        if (match) form.elements["manufacturer_id"].value = String(match.id);
+      }
+      if (form.elements["brand_id"] && !form.elements["brand_id"].value && product.brand) {
+        const match = lookups.brands.find(b => b.name.toLowerCase() === String(product.brand).toLowerCase());
+        if (match) form.elements["brand_id"].value = String(match.id);
+      }
+
+      if (form.elements["is_active"]) {
+        form.elements["is_active"].checked = Boolean(product.is_active);
+      }
+
+      if (saltListEl) saltListEl.replaceChildren();
+      const salts = Array.isArray(product.salts) && product.salts.length ? product.salts : [{ name: "", strength: "" }];
+      salts.forEach(addSaltRow);
+    } else {
+      if (form.elements["is_active"]) form.elements["is_active"].checked = true;
+      if (form.elements["form"]) form.elements["form"].value = "Tablet";
+      if (form.elements["storage_condition"]) form.elements["storage_condition"].value = "Store in a cool, dry place";
+      if (form.elements["schedule"]) form.elements["schedule"].value = "OTC";
+      if (form.elements["gst_percent"]) form.elements["gst_percent"].value = "12";
+      if (saltListEl) saltListEl.replaceChildren();
+      addSaltRow();
     }
-    return;
   }
 
-  populateSelectDropdown(form.elements["category_id"], lookups.categories, LOOKUP_LABELS.categories);
-  populateSelectDropdown(form.elements["manufacturer_id"], lookups.manufacturers, LOOKUP_LABELS.manufacturers);
-  populateSelectDropdown(form.elements["brand_id"], lookups.brands, LOOKUP_LABELS.brands, NO_CHOICE_LABELS.brands);
-  populateSelectDropdown(form.elements["supplier_id"], lookups.suppliers, LOOKUP_LABELS.suppliers, NO_CHOICE_LABELS.suppliers);
-  refreshSaltDatalist();
-
-  if (mode === "edit" && product) {
-    const fields = [
-      "name", "category_id", "manufacturer_id", "brand_id", "form", "hsn_code",
-      "pack_size", "storage_condition", "schedule", "gst_percent", "description", "image_url",
-    ];
-    for (const field of fields) {
-      if (form.elements[field]) {
-        form.elements[field].value = product[field] != null ? String(product[field]) : "";
+  // Pre-fill immediately if lookups are already loaded in frontend memory
+  if (lookups.categories.length > 0 && lookups.manufacturers.length > 0) {
+    fillProductForm();
+  } else {
+    try {
+      await loadLookups();
+      fillProductForm();
+    } catch (error) {
+      if (!error.redirecting) {
+        setDialogMessage(message, `Could not load categories and manufacturers. ${error.message}`);
       }
     }
-    if (form.elements["is_active"]) {
-      form.elements["is_active"].checked = Boolean(product.is_active);
-    }
-
-    const salts = Array.isArray(product.salts) && product.salts.length ? product.salts : [{ name: "", strength: "" }];
-    salts.forEach(addSaltRow);
-  } else {
-    if (form.elements["is_active"]) form.elements["is_active"].checked = true;
-    if (form.elements["form"]) form.elements["form"].value = "Tablet";
-    if (form.elements["storage_condition"]) form.elements["storage_condition"].value = "Store in a cool, dry place";
-    if (form.elements["schedule"]) form.elements["schedule"].value = "OTC";
-    if (form.elements["gst_percent"]) form.elements["gst_percent"].value = "12";
-    addSaltRow();
   }
 }
 
@@ -953,25 +988,32 @@ export async function openBatchDialog(mode, productId, batch = null) {
     dialog.showModal();
   }
 
-  try {
-    await loadSuppliers();
-  } catch (error) {
-    if (!error.redirecting) {
-      setDialogMessage(message, `Could not load suppliers. ${error.message}`);
-    }
-    return;
-  }
-
-  const supplierSelect = document.getElementById("bd-supplier");
-  populateSelectDropdown(supplierSelect, lookups.suppliers, LOOKUP_LABELS.suppliers, NO_CHOICE_LABELS.suppliers);
-
+  // Pre-fill directly from frontend cached batch data (no network request needed!)
   if (mode === "edit" && batch) {
     const batchValues = batchToValues(batch);
     for (const [key, value] of Object.entries(batchValues)) {
-      const input = document.getElementById(`bd-${key.replace("batch_", "").replace("_date", "").replace("_location", "")}`)
-        || form.querySelector(`[name="${key}"]`);
-      if (input) {
-        input.value = value;
+      if (form.elements[key]) {
+        form.elements[key].value = value;
+      }
+    }
+  }
+
+  const supplierSelect = document.getElementById("bd-supplier");
+  if (lookups.suppliers.length > 0) {
+    populateSelectDropdown(supplierSelect, lookups.suppliers, LOOKUP_LABELS.suppliers, NO_CHOICE_LABELS.suppliers);
+    if (mode === "edit" && batch && batch.supplier_id != null && form.elements["supplier_id"]) {
+      form.elements["supplier_id"].value = String(batch.supplier_id);
+    }
+  } else {
+    try {
+      await loadSuppliers();
+      populateSelectDropdown(supplierSelect, lookups.suppliers, LOOKUP_LABELS.suppliers, NO_CHOICE_LABELS.suppliers);
+      if (mode === "edit" && batch && batch.supplier_id != null && form.elements["supplier_id"]) {
+        form.elements["supplier_id"].value = String(batch.supplier_id);
+      }
+    } catch (error) {
+      if (!error.redirecting) {
+        setDialogMessage(message, `Could not load suppliers. ${error.message}`);
       }
     }
   }
@@ -1006,6 +1048,9 @@ export async function deleteBatch(productId, batchId) {
 // ===================== INITIALIZE PRODUCTS FEATURE =====================
 
 export function initProducts() {
+  // Pre-load lookups into frontend memory on initialization so edit/add open instantly
+  loadLookups().catch(() => {});
+
   const addProductBtn = document.getElementById("add-product-btn");
   if (addProductBtn) {
     addProductBtn.addEventListener("click", function handleAddProduct() {
