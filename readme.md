@@ -18,28 +18,52 @@ dashboard backed by a FastAPI API and PostgreSQL database.
 ## Project structure
 
 ```text
-frontend/
-  index.html               Redirects to the storefront
-  pages/                   Storefront, account, checkout, and admin pages
-  assets/
-    css/
-    images/
-    js/
-  components/              Shared navbar and footer
-backend/
-  .env                     
-  app/
-    main.py
-    api/routers/
-    core/
-    db/
-    repositories/
-    schemas/
-    services/
-    uploads/               Runtime prescription uploads (not committed)
-    utils/
-api-docs/                  API documentation and local Postman resources
-requirements.txt
+pharmacywebsite/
+├── frontend/
+│   ├── index.html                   # Root entry point redirecting to storefront
+│   ├── vercel.json                  # Vercel deployment rewrites config
+│   ├── assets/
+│   │   └── images/                  # Store branding and placeholder imagery
+│   ├── pages/                       # Storefront, customer account, and admin pages
+│   │   ├── index.html               # Storefront landing page
+│   │   ├── product.html             # Product catalog browsing page
+│   │   ├── product_detail.html      # Medicine product details page
+│   │   ├── searchproduct.html       # Product search results page
+│   │   ├── account.html             # Customer profile & address management
+│   │   ├── Checkout.html            # Cart review and order checkout page
+│   │   ├── login.html               # Customer and admin login
+│   │   ├── register.html            # Customer account registration
+│   │   ├── dashboard.html           # Admin management dashboard
+│   │   └── Uploadpresceription.html # Prescription upload page
+│   ├── features/                    # Feature-specific JavaScript and CSS modules
+│   │   ├── account/                 # Profile, saved addresses, and account UI
+│   │   ├── auth/                    # Authentication (login, register) and JWT session handling
+│   │   ├── dashboard/               # Admin dashboard controllers (products, batches, orders)
+│   │   ├── orders/                  # Cart, checkout, and order placement logic
+│   │   ├── prescriptions/           # Prescription upload styles and logic
+│   │   └── products/                # Product catalog cards, search, and details controller
+│   └── shared/                      # Reusable components, utilities, and global CSS
+│       ├── components.js            # Dynamic component loader (navbar and footer)
+│       ├── config.js                # API base URL and runtime environment configuration
+│       ├── utils.js                 # Shared formatting and DOM helpers
+│       ├── navbar.html              # Shared navigation bar component
+│       ├── footer.html              # Shared footer component
+│       └── css/                     # Global styles (variables, reset, components, utilities)
+├── backend/
+│   ├── .env                         # Environment variables (DB credentials, JWT secret)
+│   ├── config.py                    # App configuration and environment loading
+│   ├── database.py                  # PostgreSQL connection pool and schema definitions
+│   ├── main.py                      # FastAPI application entry point and middleware
+│   ├── requirements.txt             # Python dependencies
+│   ├── features/                    # Domain-driven backend features
+│   │   ├── address/                 # Customer address schemas, repository, and routes
+│   │   ├── auth/                    # Authentication routes, password hashing, and tokens
+│   │   ├── orders/                  # Orders and prescription routes, repositories, and models
+│   │   └── products/                # Product & batch CRUD, search, and catalog endpoints
+│   └── shared/                      # Shared business logic and utilities
+│       ├── pricing.py               # Pricing and discount calculation rules
+│       └── signature.py             # Product signature fingerprinting for unique constraints
+└── readme.md                        # Project documentation
 ```
 
 ## Requirements
@@ -58,7 +82,7 @@ install the packages:
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
+pip install -r backend/requirements.txt
 ```
 
 ### 2. Configure the backend
@@ -87,7 +111,7 @@ Run this only against your development database. From the repository root:
 
 ```powershell
 Set-Location backend
-python -m app.db.database
+python database.py
 ```
 
 ### 4. Start the API
@@ -95,7 +119,7 @@ python -m app.db.database
 From the `backend` directory:
 
 ```powershell
-python -m uvicorn app.main:app --reload
+uvicorn main:app --reload
 ```
 
 The API is available at `http://127.0.0.1:8000`. FastAPI's interactive API
@@ -110,7 +134,7 @@ python -m http.server 5500 --directory frontend
 ```
 
 Open `http://localhost:5500`. The local API URL is configured in
-`frontend/assets/js/config.js`. If you change the frontend host or port, update
+`frontend/shared/config.js`. If you change the frontend host or port, update
 `FRONTEND_ORIGINS` in `backend/.env` to match.
 
 ## Production notes
@@ -124,3 +148,10 @@ Open `http://localhost:5500`. The local API URL is configured in
   reviewing its effects.
 - Configure persistent, access-controlled storage for prescription uploads
   when deploying; local upload files are not tracked by Git.
+
+
+## Features in the Future will be added 
+
+- While adding medicines our software will show you suggestions for matching medicines. This will avoid burden for you typing manually whole thing.
+- Planning to add a Qr code scanner this is for same reason of avoiding burden from you to add medicines manually.
+  
