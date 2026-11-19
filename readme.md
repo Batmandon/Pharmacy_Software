@@ -20,8 +20,7 @@ dashboard backed by a FastAPI API and PostgreSQL database.
 ```text
 pharmacywebsite/
 ├── frontend/
-│   ├── index.html                   # Root entry point redirecting to storefront
-│   ├── vercel.json                  # Vercel deployment rewrites config
+│   ├── vercel.json                  # Vercel deployment routing and rewrites config
 │   ├── assets/
 │   │   └── images/                  # Store branding and placeholder imagery
 │   ├── pages/                       # Storefront, customer account, and admin pages

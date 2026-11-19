@@ -1,4 +1,7 @@
 {
+  "redirects": [
+    { "source": "/", "destination": "/pages/index.html", "permanent": false }
+  ],
   "rewrites": [
     { "source": "/api/:path*", "destination": "https://pharmacy-app-vmyg.onrender.com/api/:path*" }
   ]
