@@ -66,7 +66,7 @@ function updatePager(pager, page, size, total) {
   const totalPages = Math.max(1, Math.ceil(total / size));
   pager.prev.disabled = page <= 1;
   pager.next.disabled = page >= totalPages;
-  pager.info.textContent = total > 0 ? `Page ${page} of ${totalPages} Â· ${formatNumber(total)} total` : "";
+  pager.info.textContent = total > 0 ? `Page ${page} of ${totalPages} \u00b7 ${formatNumber(total)} total` : "";
 }
 
 /**
@@ -240,7 +240,7 @@ function renderItemRow(item) {
   titleDiv.textContent = item.name || "";
   const subDiv = document.createElement("div");
   subDiv.className = "cell-sub";
-  subDiv.textContent = [item.strength, item.pack_size].filter(Boolean).join(" Â· ");
+  subDiv.textContent = [item.strength, item.pack_size].filter(Boolean).join(" \u00b7 ");
   nameTd.append(titleDiv, subDiv);
 
   const batchTd = document.createElement("td");

@@ -102,7 +102,7 @@ function updatePager(pager, page, size, total) {
   const totalPages = Math.max(1, Math.ceil(total / size));
   pager.prev.disabled = page <= 1;
   pager.next.disabled = page >= totalPages;
-  pager.info.textContent = total > 0 ? `Page ${page} of ${totalPages} Â· ${formatNumber(total)} total` : "";
+  pager.info.textContent = total > 0 ? `Page ${page} of ${totalPages} \u00b7 ${formatNumber(total)} total` : "";
 }
 
 function sortByName(itemA, itemB) {
@@ -530,7 +530,7 @@ export function renderProductRow(product) {
 
   const subCell = cell("sub");
   if (subCell) {
-    subCell.textContent = [product.form, product.strength, product.pack_size].filter(Boolean).join(" Â· ");
+    subCell.textContent = [product.form, product.strength, product.pack_size].filter(Boolean).join(" \u00b7 ");
   }
 
   const img = cell("img");
