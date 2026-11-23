@@ -212,10 +212,14 @@ class ReadProductOperation:
                 SELECT 
                     p.id, p.name, {strength_label("p")} AS strength, p.form, p.pack_size, p.schedule,
                     p.gst_percent, p.hsn_code, p.storage_condition, p.description, p.image_url, 
+                    p.side_effects, p.dosage_information,
+                    p.description AS description_uses,
+                    p.side_effects AS side_effects_warnings,
+                    p.storage_condition AS storage_care,
+                    NULL::text AS information_source,
+                    NULL::date AS last_reviewed_at,
                     p.is_active, p.category_id, p.manufacturer_id, p.brand_id,
                     c.name AS category, m.name AS manufacturer, br.name AS brand,
-                    pd.description_uses, pd.side_effects_warnings, pd.dosage_information, 
-                    pd.storage_care, pd.information_source, pd.last_reviewed_at,
                     COALESCE(
                         (SELECT json_agg(json_build_object('salt_id', ps.salt_id, 'name', s.name, 'strength', ps.strength) ORDER BY ps.id)
                          FROM product_salts ps JOIN salts s ON s.id = ps.salt_id
@@ -228,7 +232,6 @@ class ReadProductOperation:
                 LEFT JOIN categories c ON c.id = p.category_id
                 LEFT JOIN manufacturers m ON m.id = p.manufacturer_id
                 LEFT JOIN brands br ON br.id = p.brand_id
-                LEFT JOIN product_details pd ON pd.product_id = p.id
                 LEFT JOIN LATERAL (
                     SELECT b.mrp, b.discount_percent, b.quantity
                     FROM batches b
@@ -330,3 +333,25 @@ class ReadProductOperation:
             cur.execute(f"SELECT COUNT(*) AS total {base}", params)
             total = cur.fetchone()["total"]
         return {"items": items, "page": page, "page_size": page_size, "total": total}
+
+    # ============================================================================= #
+    #                       Medicine Catalog Auto-Suggestions                       #
+    # ============================================================================= #
+
+    def suggest_catalog_medicines(self, query: str, limit: int = 5):
+        """Returns matching 5 items from medicine_catalog using text_pattern_ops prefix search."""
+        clean_query = query.strip()
+        if not clean_query:
+            return []
+        sanitized = clean_query.replace("!", "!!").replace("%", "!%").replace("_", "!_")
+        pattern = f"{sanitized.lower()}%"
+        with self.conn.cursor() as cur:
+            cur.execute("""
+                SELECT id, name, form, manufacturer, pack_size, image_url, uses, side_effects, salts
+                FROM public.medicine_catalog
+                WHERE lower(name) LIKE %s ESCAPE '!'
+                ORDER BY name
+                LIMIT %s
+            """, (pattern, limit))
+            return cur.fetchall()
+

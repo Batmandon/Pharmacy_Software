@@ -1,12 +1,15 @@
 from psycopg_pool import ConnectionPool
 from psycopg.rows import dict_row
-from config import DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME
+from config import DATABASE_URL, DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME
 from psycopg.conninfo import make_conninfo
 
-conninfo = make_conninfo(
-    host=DB_HOST, port=DB_PORT, dbname=DB_NAME,
-    user=DB_USER, password=DB_PASSWORD,
-)
+if DATABASE_URL:
+    conninfo = DATABASE_URL
+else:
+    conninfo = make_conninfo(
+        host=DB_HOST, port=DB_PORT, dbname=DB_NAME,
+        user=DB_USER, password=DB_PASSWORD,
+    )
 
 pool = ConnectionPool(
     conninfo=conninfo,
@@ -87,9 +90,11 @@ def init_db():
         requires_prescription BOOLEAN GENERATED ALWAYS AS (schedule <> 'OTC') STORED,
         gst_percent NUMERIC(4,2) NOT NULL DEFAULT 12,
         hsn_code TEXT,
+        image_url TEXT,
         storage_condition TEXT,
         description TEXT,
-        image_url TEXT,
+        side_effects TEXT,
+        dosage_information TEXT,
         is_active BOOLEAN NOT NULL DEFAULT TRUE,
         created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -104,17 +109,7 @@ def init_db():
     CREATE UNIQUE INDEX IF NOT EXISTS manufacturers_lower_name_key ON manufacturers (lower(name));
     CREATE UNIQUE INDEX IF NOT EXISTS salts_lower_name_key ON salts (lower(name));
 
-    CREATE TABLE IF NOT EXISTS product_details (
-        id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-        product_id BIGINT NOT NULL UNIQUE REFERENCES products(id) ON DELETE CASCADE,
-        description_uses TEXT,
-        side_effects_warnings TEXT,
-        dosage_information TEXT,
-        storage_care TEXT,
-        information_source TEXT,
-        last_reviewed_at DATE
-    );
-
+    
     CREATE TABLE IF NOT EXISTS product_salts (
         id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
         product_id BIGINT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
@@ -206,6 +201,21 @@ def init_db():
         reject_reason TEXT,
         created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
+
+    CREATE TABLE IF NOT EXISTS public.medicine_catalog (
+        id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+        name TEXT NOT NULL,
+        form TEXT NULL,
+        uses TEXT NULL,
+        side_effects TEXT NULL,
+        image_url TEXT NULL,
+        manufacturer TEXT NULL,
+        salts JSONB NULL DEFAULT '[]'::jsonb,
+        pack_size TEXT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_medicine_catalog_name 
+    ON public.medicine_catalog USING btree (lower(name) text_pattern_ops);
 
     CREATE OR REPLACE FUNCTION set_updated_at()
     RETURNS trigger AS $$

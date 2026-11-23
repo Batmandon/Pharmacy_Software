@@ -69,8 +69,8 @@ class CrudProductOperation:
         with self.conn.cursor() as cur:
             cur.execute(
                 """
-                INSERT INTO products (category_id, manufacturer_id, brand_id, name, form, pack_size, schedule, gst_percent, hsn_code, storage_condition, description, image_url, signature)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                INSERT INTO products (category_id, manufacturer_id, brand_id, name, form, pack_size, schedule, gst_percent, hsn_code, storage_condition, description, side_effects, dosage_information, image_url, signature)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING id
                 """,
                 (
@@ -85,6 +85,8 @@ class CrudProductOperation:
                     product.hsn_code,
                     product.storage_condition,
                     product.description,
+                    product.side_effects,
+                    product.dosage_information,
                     product.image_url,
                     make_signature(
                         product.name, product.form, product.pack_size,

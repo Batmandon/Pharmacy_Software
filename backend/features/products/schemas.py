@@ -122,7 +122,9 @@ class AddProduct(BaseModel):
     gst_percent: float = Field(default=12.0, ge=0, le=99.99)
     hsn_code: Optional[str] = Field(default=None, max_length=20)
     storage_condition: Optional[str] = Field(default=None, max_length=100)
-    description: Optional[str] = Field(default=None, max_length=500)
+    description: Optional[str] = Field(default=None, max_length=1000)
+    side_effects: Optional[str] = Field(default=None, max_length=1000)
+    dosage_information: Optional[str] = Field(default=None, max_length=1000)
     image_url: Optional[str] = Field(default=None, max_length=200)
 
     @model_validator(mode="after")
@@ -146,7 +148,9 @@ class UpdateProduct(BaseModel):
     gst_percent: Optional[float] = Field(default=None, ge=0, le=99.99)
     hsn_code: Optional[str] = Field(default=None, max_length=20)
     storage_condition: Optional[str] = Field(default=None, max_length=100)
-    description: Optional[str] = Field(default=None, max_length=500)
+    description: Optional[str] = Field(default=None, max_length=1000)
+    side_effects: Optional[str] = Field(default=None, max_length=1000)
+    dosage_information: Optional[str] = Field(default=None, max_length=1000)
     image_url: Optional[str] = Field(default=None, max_length=200)
 
     @model_validator(mode="after")

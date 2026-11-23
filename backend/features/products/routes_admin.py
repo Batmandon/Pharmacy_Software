@@ -370,3 +370,17 @@ def expiring(
         page=page,
         page_size=page_size,
     )
+
+# ============================================================================= #
+#                       Medicine Catalog Auto-Suggestions                       #
+# ============================================================================= #
+
+@admin_router.get("/catalog/suggest/{query}")
+def suggest_catalog_medicines_path(
+    query: str = Path(min_length=1, max_length=100, description="Medicine name prefix to search"),
+    conn=Depends(get_db),
+):
+    cleaned = query.strip()
+    if not cleaned:
+        return []
+    return ReadProductOperation(conn).suggest_catalog_medicines(cleaned)
