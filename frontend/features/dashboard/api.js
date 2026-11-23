@@ -27,6 +27,7 @@ export const DASHBOARD_PATHS = {
   suppliers: "/admin/suppliers",
   salts: "/admin/salts",
   saltStrengths: "/admin/products/salt-strengths",
+  catalogSuggest: "/admin/catalog/suggest",
   orders: "/admin/orders",
   stockAlerts: "/admin/batches/stock-alerts",
   expiring: "/admin/expiry/expiring",
@@ -85,8 +86,12 @@ export async function request(method, path, options = {}) {
         Accept: "application/json",
       },
       body: body ? JSON.stringify(body) : undefined,
+      signal: options.signal,
     });
   } catch (networkError) {
+    if (networkError.name === "AbortError") {
+      throw networkError;
+    }
     throw new Error("Cannot reach the server. Check your internet connection and try again.");
   }
 

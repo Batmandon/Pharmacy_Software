@@ -219,7 +219,15 @@ export function validateProductForm(values) {
   }
 
   if (values.description) {
-    checkLengthLimit(errors, values, "description", 500, "Description");
+    checkLengthLimit(errors, values, "description", 1000, "Description");
+  }
+
+  if (values.side_effects) {
+    checkLengthLimit(errors, values, "side_effects", 1000, "Side effects");
+  }
+
+  if (values.dosage_information) {
+    checkLengthLimit(errors, values, "dosage_information", 1000, "Dosage information");
   }
 
   if (values.image_url) {
@@ -848,6 +856,7 @@ export async function openProductDialog(mode, product = null) {
   clearFormErrors(form);
   setDialogMessage(message, "");
   form.reset();
+  hideCatalogSuggestions();
 
   const saltListEl = document.getElementById("salt-list");
   if (saltListEl) saltListEl.replaceChildren();
@@ -875,7 +884,8 @@ export async function openProductDialog(mode, product = null) {
     if (mode === "edit" && product) {
       const fields = [
         "name", "category_id", "manufacturer_id", "brand_id", "form", "hsn_code",
-        "pack_size", "storage_condition", "schedule", "gst_percent", "description", "image_url",
+        "pack_size", "storage_condition", "schedule", "gst_percent", "description",
+        "side_effects", "dosage_information", "image_url",
       ];
       for (const field of fields) {
         if (form.elements[field]) {
@@ -983,6 +993,7 @@ export async function openBatchDialog(mode, productId, batch = null) {
   clearFormErrors(form);
   setDialogMessage(message, "");
   form.reset();
+  hideCatalogSuggestions();
 
   if (typeof dialog.showModal === "function") {
     dialog.showModal();
@@ -1045,11 +1056,181 @@ export async function deleteBatch(productId, batchId) {
   }
 }
 
+// ===================== CATALOG AUTOCOMPLETE & PRE-FILL =====================
+const catalogCache = new Map();
+let catalogDebounceTimer = null;
+let catalogAbortController = null;
+
+export function hideCatalogSuggestions() {
+  const suggestionsEl = document.getElementById("p-name-suggestions");
+  if (suggestionsEl) {
+    suggestionsEl.hidden = true;
+    suggestionsEl.replaceChildren();
+  }
+}
+
+export function applyCatalogSuggestion(item) {
+  const form = document.getElementById("product-form");
+  if (!form || !item) return;
+
+  // Fill text and select fields
+  if (form.elements["name"]) form.elements["name"].value = item.name || "";
+  if (item.form && form.elements["form"]) form.elements["form"].value = item.form;
+  if (item.pack_size && form.elements["pack_size"]) form.elements["pack_size"].value = item.pack_size;
+  if (item.image_url && form.elements["image_url"]) form.elements["image_url"].value = item.image_url;
+  if (form.elements["description"]) {
+    form.elements["description"].value = item.uses || item.description || "";
+  }
+  if (form.elements["side_effects"]) {
+    form.elements["side_effects"].value = item.side_effects || "";
+  }
+  if (form.elements["dosage_information"]) {
+    form.elements["dosage_information"].value = item.dosage_information || "";
+  }
+  if (form.elements["storage_condition"]) {
+    form.elements["storage_condition"].value = item.storage_condition || "Store in a cool, dry place";
+  }
+
+  // Match Manufacturer from lookups
+  if (item.manufacturer && form.elements["manufacturer_id"]) {
+    const match = lookups.manufacturers.find(
+      (m) => m.name.toLowerCase() === String(item.manufacturer).toLowerCase()
+    );
+    if (match) {
+      form.elements["manufacturer_id"].value = String(match.id);
+      setFieldError(form.elements["manufacturer_id"], "");
+    }
+  }
+
+  // Pre-fill Salts
+  const saltListEl = document.getElementById("salt-list");
+  if (saltListEl) {
+    saltListEl.replaceChildren();
+    if (Array.isArray(item.salts) && item.salts.length > 0) {
+      item.salts.forEach((s) => {
+        addSaltRow({ name: s.name || "", strength: s.strength || "" });
+      });
+    } else {
+      addSaltRow();
+    }
+  }
+
+  // Clear any existing errors for auto-filled fields
+  clearFormErrors(form);
+  hideCatalogSuggestions();
+}
+
+function renderCatalogSuggestions(items, suggestionsEl) {
+  if (!suggestionsEl) return;
+  if (!Array.isArray(items) || items.length === 0) {
+    suggestionsEl.hidden = true;
+    suggestionsEl.replaceChildren();
+    return;
+  }
+
+  const fragment = document.createDocumentFragment();
+  for (const item of items) {
+    const row = document.createElement("div");
+    row.className = "catalog-suggestion-item";
+    row.setAttribute("role", "button");
+    row.setAttribute("tabindex", "0");
+
+    const nameEl = document.createElement("div");
+    nameEl.className = "catalog-suggestion-name";
+    nameEl.textContent = item.name;
+
+    const subEl = document.createElement("div");
+    subEl.className = "catalog-suggestion-sub";
+    const subParts = [item.form, item.manufacturer].filter(Boolean);
+    subEl.textContent = subParts.join(" · ");
+
+    row.append(nameEl, subEl);
+
+    row.addEventListener("mousedown", (e) => {
+      e.preventDefault(); // Prevent input blur before click finishes
+      applyCatalogSuggestion(item);
+    });
+    row.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        applyCatalogSuggestion(item);
+      }
+    });
+
+    fragment.append(row);
+  }
+
+  suggestionsEl.replaceChildren(fragment);
+  suggestionsEl.hidden = false;
+}
+
+export function setupCatalogAutocomplete() {
+  const nameInput = document.getElementById("p-name");
+  const suggestionsEl = document.getElementById("p-name-suggestions");
+  if (!nameInput || !suggestionsEl) return;
+
+  nameInput.addEventListener("input", function handleNameInput(event) {
+    // Only provide live suggestions in 'add' mode
+    if (productDialogState.mode !== "add") {
+      hideCatalogSuggestions();
+      return;
+    }
+
+    const query = event.target.value.trim();
+    clearTimeout(catalogDebounceTimer);
+
+    if (query.length < 2) {
+      hideCatalogSuggestions();
+      return;
+    }
+
+    const lowerQuery = query.toLowerCase();
+    if (catalogCache.has(lowerQuery)) {
+      renderCatalogSuggestions(catalogCache.get(lowerQuery), suggestionsEl);
+      return;
+    }
+
+    catalogDebounceTimer = setTimeout(async function executeCatalogSearch() {
+      if (catalogAbortController) {
+        catalogAbortController.abort();
+      }
+      catalogAbortController = new AbortController();
+
+      try {
+        const path = `${DASHBOARD_PATHS.catalogSuggest}/${encodeURIComponent(query)}`;
+        const items = await request("GET", path, {
+          signal: catalogAbortController.signal,
+          allowArray: true,
+        });
+        catalogCache.set(lowerQuery, items || []);
+        renderCatalogSuggestions(items || [], suggestionsEl);
+      } catch (err) {
+        if (err.name !== "AbortError") {
+          console.error("Failed to fetch catalog suggestions:", err);
+        }
+      }
+    }, 300);
+  });
+
+  nameInput.addEventListener("keydown", function handleNameKeydown(event) {
+    if (event.key === "Escape") {
+      hideCatalogSuggestions();
+    }
+  });
+
+  document.addEventListener("click", function handleOutsideClick(event) {
+    if (!nameInput.contains(event.target) && !suggestionsEl.contains(event.target)) {
+      hideCatalogSuggestions();
+    }
+  });
+}
+
 // ===================== INITIALIZE PRODUCTS FEATURE =====================
 
 export function initProducts() {
   // Pre-load lookups into frontend memory on initialization so edit/add open instantly
   loadLookups().catch(() => {});
+  setupCatalogAutocomplete();
 
   const addProductBtn = document.getElementById("add-product-btn");
   if (addProductBtn) {
@@ -1240,6 +1421,8 @@ export function initProducts() {
         hsn_code: (formData.get("hsn_code") || "").toString().trim(),
         storage_condition: (formData.get("storage_condition") || "").toString().trim(),
         description: (formData.get("description") || "").toString().trim(),
+        side_effects: (formData.get("side_effects") || "").toString().trim(),
+        dosage_information: (formData.get("dosage_information") || "").toString().trim(),
         image_url: (formData.get("image_url") || "").toString().trim(),
       };
 
@@ -1283,6 +1466,8 @@ export function initProducts() {
         hsn_code: productValues.hsn_code || null,
         storage_condition: productValues.storage_condition || null,
         description: productValues.description || null,
+        side_effects: productValues.side_effects || null,
+        dosage_information: productValues.dosage_information || null,
         image_url: productValues.image_url || null,
         salts,
       };

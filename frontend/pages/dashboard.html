@@ -400,8 +400,10 @@
         <legend>Product</legend>
 
         <div class="grid-2">
-          <div class="field"><label for="p-name">Name</label>
-            <input type="text" id="p-name" name="name" class="input" maxlength="100" autofocus><small class="error"></small></div>
+          <div class="field autocomplete-field"><label for="p-name">Name</label>
+            <input type="text" id="p-name" name="name" class="input" maxlength="100" autofocus autocomplete="off"><small class="error"></small>
+            <div id="p-name-suggestions" class="catalog-suggestions" hidden></div>
+          </div>
           <div class="field"><label for="p-category">Category</label>
             <div class="select-add">
               <select id="p-category" name="category_id" class="input"></select>
@@ -451,8 +453,14 @@
         <div class="field"><label for="p-storage">Storage condition <span class="opt">(optional)</span></label>
           <input type="text" id="p-storage" name="storage_condition" class="input" maxlength="100" placeholder="e.g. Store in a cool, dry place"><small class="error"></small></div>
 
-        <div class="field"><label for="p-description">Description <span class="opt">(optional)</span></label>
-          <textarea id="p-description" name="description" class="input" rows="3" maxlength="500"></textarea><small class="error"></small></div>
+        <div class="field"><label for="p-description">Description / Uses <span class="opt">(optional)</span></label>
+          <textarea id="p-description" name="description" class="input" rows="3" maxlength="1000"></textarea><small class="error"></small></div>
+
+        <div class="field"><label for="p-side-effects">Side effects <span class="opt">(optional)</span></label>
+          <textarea id="p-side-effects" name="side_effects" class="input" rows="2" maxlength="1000" placeholder="e.g. Nausea, dizziness, headache"></textarea><small class="error"></small></div>
+
+        <div class="field"><label for="p-dosage">Dosage information <span class="opt">(optional)</span></label>
+          <input type="text" id="p-dosage" name="dosage_information" class="input" maxlength="1000" placeholder="e.g. As directed by physician"><small class="error"></small></div>
 
         <div class="field"><label for="p-image">Image URL <span class="opt">(optional)</span></label>
           <input type="url" id="p-image" name="image_url" class="input" maxlength="200" placeholder="https://..."><small class="error"></small></div>
