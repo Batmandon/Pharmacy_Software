@@ -9,7 +9,6 @@ from features.products.schemas import (
     EditBatch,
     CreateBrand,
     CreateCategory,
-    CreateManufacturer,
     CreateSalt,
     CreateSupplier,
 )
@@ -17,7 +16,6 @@ from features.products.schemas import (
 CatalogEntity = Literal[
     "categories",
     "brands",
-    "manufacturers",
     "suppliers",
     "salts",
 ]
@@ -25,7 +23,6 @@ CatalogEntity = Literal[
 ENTITY_CONFIG = {
     "categories": (CreateCategory, (("name",),)),
     "brands": (CreateBrand, (("name",),)),
-    "manufacturers": (CreateManufacturer, (("name",),)),
     "suppliers": (CreateSupplier, (("name",), ("phone",), ("gstin",))),
     "salts": (CreateSalt, (("name",),)),
 }
@@ -37,7 +34,6 @@ REFERENCE_CHECKS = {}
 DELETE_REFERENCES = {
     "categories": (("products", "category_id"),),
     "brands": (("products", "brand_id"),),
-    "manufacturers": (("products", "manufacturer_id"),),
     "suppliers": (("batches", "supplier_id"),),
     "salts": (("products", "salt_id"), ("product_salts", "salt_id")),
 }
@@ -45,7 +41,6 @@ DELETE_REFERENCES = {
 ENTITY_LABELS = {
     "categories": "category",
     "brands": "brand",
-    "manufacturers": "manufacturer",
     "suppliers": "supplier",
     "salts": "salt",
 }
@@ -69,13 +64,12 @@ class CrudProductOperation:
         with self.conn.cursor() as cur:
             cur.execute(
                 """
-                INSERT INTO products (category_id, manufacturer_id, brand_id, name, form, pack_size, schedule, gst_percent, hsn_code, storage_condition, description, side_effects, dosage_information, image_url, signature)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                INSERT INTO products (category_id, brand_id, name, form, pack_size, schedule, gst_percent, hsn_code, storage_condition, description, side_effects, dosage_information, image_url, signature)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING id
                 """,
                 (
                     product.category_id,
-                    product.manufacturer_id,
                     product.brand_id,
                     product.name,
                     product.form,

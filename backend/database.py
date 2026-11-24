@@ -56,11 +56,6 @@ def init_db():
         name TEXT NOT NULL UNIQUE
     );
 
-    CREATE TABLE IF NOT EXISTS manufacturers (
-        id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-        name TEXT NOT NULL UNIQUE
-    );
-
     CREATE TABLE IF NOT EXISTS suppliers (
         id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
         name TEXT NOT NULL UNIQUE,
@@ -77,7 +72,6 @@ def init_db():
         id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
         brand_id BIGINT REFERENCES brands(id),
         category_id BIGINT REFERENCES categories(id),
-        manufacturer_id BIGINT REFERENCES manufacturers(id),
         salt_id BIGINT REFERENCES salts(id),
         name TEXT NOT NULL,
         form TEXT NOT NULL CHECK (form IN (
@@ -106,7 +100,6 @@ def init_db():
     -- "Fever" and "fever" must not be two categories (same for the other name lists)
     CREATE UNIQUE INDEX IF NOT EXISTS categories_lower_name_key ON categories (lower(name));
     CREATE UNIQUE INDEX IF NOT EXISTS brands_lower_name_key ON brands (lower(name));
-    CREATE UNIQUE INDEX IF NOT EXISTS manufacturers_lower_name_key ON manufacturers (lower(name));
     CREATE UNIQUE INDEX IF NOT EXISTS salts_lower_name_key ON salts (lower(name));
 
     
@@ -205,11 +198,11 @@ def init_db():
     CREATE TABLE IF NOT EXISTS public.medicine_catalog (
         id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
         name TEXT NOT NULL,
+        brand TEXT NULL,
         form TEXT NULL,
         uses TEXT NULL,
         side_effects TEXT NULL,
         image_url TEXT NULL,
-        manufacturer TEXT NULL,
         salts JSONB NULL DEFAULT '[]'::jsonb,
         pack_size TEXT NULL
     );

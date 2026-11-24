@@ -45,14 +45,13 @@ class ProductQueryBuilder:
 
         self._select_cols = f"""
             p.id, p.name, {strength_label("p")} AS strength, p.form, p.pack_size, p.schedule,
-            p.image_url, c.name AS category, br.name AS brand, m.name AS manufacturer
+            p.image_url, c.name AS category, br.name AS brand
         """
 
         self._joins = """
             FROM products p
             LEFT JOIN categories c ON c.id = p.category_id
             LEFT JOIN brands br ON br.id = p.brand_id
-            LEFT JOIN manufacturers m ON m.id = p.manufacturer_id
         """
 
         self._where_conditions = ["TRUE"]
@@ -62,7 +61,6 @@ class ProductQueryBuilder:
         self._mode = "admin"
         self._select_cols += """,
             p.category_id,
-            p.manufacturer_id,
             p.brand_id,
             p.gst_percent,
             p.hsn_code,
@@ -218,8 +216,8 @@ class ReadProductOperation:
                     p.storage_condition AS storage_care,
                     NULL::text AS information_source,
                     NULL::date AS last_reviewed_at,
-                    p.is_active, p.category_id, p.manufacturer_id, p.brand_id,
-                    c.name AS category, m.name AS manufacturer, br.name AS brand,
+                    p.is_active, p.category_id, p.brand_id,
+                    c.name AS category, br.name AS brand,
                     COALESCE(
                         (SELECT json_agg(json_build_object('salt_id', ps.salt_id, 'name', s.name, 'strength', ps.strength) ORDER BY ps.id)
                          FROM product_salts ps JOIN salts s ON s.id = ps.salt_id
@@ -230,7 +228,6 @@ class ReadProductOperation:
                     CASE WHEN batch.mrp IS NOT NULL THEN 'In Stock' ELSE 'Out of Stock' END AS stock_status
                 FROM products p
                 LEFT JOIN categories c ON c.id = p.category_id
-                LEFT JOIN manufacturers m ON m.id = p.manufacturer_id
                 LEFT JOIN brands br ON br.id = p.brand_id
                 LEFT JOIN LATERAL (
                     SELECT b.mrp, b.discount_percent, b.quantity
@@ -344,14 +341,19 @@ class ReadProductOperation:
         if not clean_query:
             return []
         sanitized = clean_query.replace("!", "!!").replace("%", "!%").replace("_", "!_")
-        pattern = f"{sanitized.lower()}%"
+        prefix_pattern = f"{sanitized.lower()}%"
+        contains_pattern = f"%{sanitized.lower()}%"
         with self.conn.cursor() as cur:
             cur.execute("""
-                SELECT id, name, form, manufacturer, pack_size, image_url, uses, side_effects, salts
+                SELECT id, name, brand, form, pack_size, image_url, uses, side_effects, salts
                 FROM public.medicine_catalog
                 WHERE lower(name) LIKE %s ESCAPE '!'
-                ORDER BY name
+                   OR (brand IS NOT NULL AND lower(brand) LIKE %s ESCAPE '!')
+                   OR (salts::text ILIKE %s ESCAPE '!')
+                ORDER BY 
+                   CASE WHEN lower(name) LIKE %s ESCAPE '!' THEN 0 ELSE 1 END,
+                   name
                 LIMIT %s
-            """, (pattern, limit))
+            """, (prefix_pattern, prefix_pattern, contains_pattern, prefix_pattern, limit))
             return cur.fetchall()
 

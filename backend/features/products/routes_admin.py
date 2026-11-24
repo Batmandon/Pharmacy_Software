@@ -10,7 +10,6 @@ from features.products.schemas import (
     CreateBatch, EditBatch, ProductWithBatch, UpdateProductWithBatch, 
     CreateBrand, EditBrand,
     CreateCategory, EditCategory,
-    CreateManufacturer, EditManufacturer,
     CreateSalt, EditSalt,
     CreateSupplier, EditSupplier,)
 
@@ -27,7 +26,6 @@ admin_router = APIRouter()
 
 FK_MESSAGES = {
     "products_category_id_fkey": "That category does not exist.",
-    "products_manufacturer_id_fkey": "That manufacturer does not exist.",
     "products_brand_id_fkey": "That brand does not exist.",
     "product_salts_salt_id_fkey": "One of the salts does not exist.",
     "batches_supplier_id_fkey": "That supplier does not exist.",
@@ -263,33 +261,6 @@ def delete_brand(
     conn=Depends(get_db),
 ):
     return _run(lambda: CrudProductOperation(conn).delete_item("brands", item_id))
-
-
-@admin_router.get("/manufacturers")
-def list_manufacturers(conn=Depends(get_db)):
-    return CrudProductOperation(conn).list_items("manufacturers")
-
-
-@admin_router.post("/manufacturers", status_code=201)
-def create_manufacturer(item: CreateManufacturer, conn=Depends(get_db)):
-    return _run(lambda: CrudProductOperation(conn).create_item("manufacturers", item))
-
-
-@admin_router.patch("/manufacturers/{item_id}")
-def edit_manufacturer(
-    item: EditManufacturer,
-    item_id: int = Path(ge=1),
-    conn=Depends(get_db),
-):
-    return _run(lambda: CrudProductOperation(conn).edit_item("manufacturers", item_id, item))
-
-
-@admin_router.delete("/manufacturers/{item_id}")
-def delete_manufacturer(
-    item_id: int = Path(ge=1),
-    conn=Depends(get_db),
-):
-    return _run(lambda: CrudProductOperation(conn).delete_item("manufacturers", item_id))
 
 
 @admin_router.get("/suppliers")

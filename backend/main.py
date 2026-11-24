@@ -9,6 +9,8 @@ if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
 from fastapi import Depends, FastAPI, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from features.products.routes import products_feature_router
 from features.auth.auth_routes import router as auth_router
@@ -30,6 +32,18 @@ async def lifespan(app: FastAPI):
         pool.close()
 
 app = FastAPI(lifespan=lifespan)
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    errors = exc.errors()
+    print(f"Validation error on {request.method} {request.url.path}: {errors}", flush=True)
+    first_error = errors[0] if errors else {}
+    loc = " -> ".join(str(l) for l in first_error.get("loc", []))
+    msg = first_error.get("msg", "Validation error")
+    return JSONResponse(
+        status_code=422,
+        content={"detail": f"Field '{loc}': {msg}", "errors": errors},
+    )
 
 @app.middleware("http")
 async def log_time(request: Request, call_next):
