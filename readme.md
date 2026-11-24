@@ -6,7 +6,7 @@ dashboard backed by a FastAPI API and PostgreSQL database.
 
 ## New Feature
 
-- Added Suggestions while admin adding medicine and its details.
+- Added Suggestions for medicine creating and its details.
 
 ## Features
 
