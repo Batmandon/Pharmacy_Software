@@ -62,7 +62,6 @@ export function renderCatalogCard(product) {
   const strength = escapeHtml(product.strength || "");
   const category = escapeHtml(product.category || "Uncategorized");
   const brand = escapeHtml(product.brand || "Brand not listed");
-  const manufacturer = escapeHtml(product.manufacturer || "");
   const salt = escapeHtml(product.salt || "");
   const description = escapeHtml(product.description || "");
   const packDetails = [product.form, product.pack_size].filter(Boolean).map(escapeHtml).join(" · ");
@@ -94,7 +93,6 @@ export function renderCatalogCard(product) {
       <h2 class="name product-name"><a class="product-detail-link" href="${detailUrl}">${name}</a></h2>
       ${strength ? `<span class="strength product-pack">${strength}</span>` : ""}
       <span class="product-detail product-brand"><strong>Brand:</strong> ${brand}</span>
-      ${manufacturer ? `<span class="product-detail"><strong>Manufacturer:</strong> ${manufacturer}</span>` : ""}
       ${salt ? `<span class="product-detail"><strong>Salt:</strong> ${salt}</span>` : ""}
       ${packDetails ? `<span class="pack"><i class="fa-solid fa-box"></i> ${packDetails}</span>` : ""}
       ${description ? `<p class="product-description">${description}</p>` : ""}
