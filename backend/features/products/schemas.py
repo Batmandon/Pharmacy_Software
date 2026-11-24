@@ -90,7 +90,7 @@ class EditBatch(BaseModel):
 FormType = Literal[
     "Tablet", "Capsule", "Syrup", "Suspension", "Injection",
     "Ointment", "Cream", "Gel", "Drops", "Powder",
-    "Inhaler", "Lotion", "Other",
+    "Inhaler", "Lotion", "Dry Syrup", "Expectorant", "Liquid", "Oral Suspension", "Other",
 ]
 ScheduleType = Literal["OTC", "H", "H1", "X"]
 

@@ -77,7 +77,7 @@ def init_db():
         form TEXT NOT NULL CHECK (form IN (
             'Tablet','Capsule','Syrup','Suspension','Injection',
             'Ointment','Cream','Gel','Drops','Powder',
-            'Inhaler','Lotion','Other'
+            'Inhaler','Lotion','Dry Syrup','Expectorant','Liquid','Oral Suspension','Other'
         )),
         pack_size TEXT,
         schedule TEXT NOT NULL DEFAULT 'OTC' CHECK (schedule IN ('OTC', 'H', 'H1', 'X')),
@@ -101,6 +101,13 @@ def init_db():
     CREATE UNIQUE INDEX IF NOT EXISTS categories_lower_name_key ON categories (lower(name));
     CREATE UNIQUE INDEX IF NOT EXISTS brands_lower_name_key ON brands (lower(name));
     CREATE UNIQUE INDEX IF NOT EXISTS salts_lower_name_key ON salts (lower(name));
+
+    ALTER TABLE products DROP CONSTRAINT IF EXISTS products_form_check;
+    ALTER TABLE products ADD CONSTRAINT products_form_check CHECK (form IN (
+        'Tablet','Capsule','Syrup','Suspension','Injection',
+        'Ointment','Cream','Gel','Drops','Powder',
+        'Inhaler','Lotion','Dry Syrup','Expectorant','Liquid','Oral Suspension','Other'
+    ));
 
     
     CREATE TABLE IF NOT EXISTS product_salts (
