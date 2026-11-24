@@ -34,7 +34,6 @@ const expiryCards = {
 
 const lookups = {
   categories: [],
-  manufacturers: [],
   brands: [],
   suppliers: [],
   salts: [],
@@ -43,7 +42,6 @@ const lookups = {
 
 const LOOKUP_LABELS = {
   categories: "category",
-  manufacturers: "manufacturer",
   brands: "brand",
   suppliers: "supplier",
   salts: "salt",
@@ -184,9 +182,6 @@ export function validateProductForm(values) {
   if (!values.category_id) {
     errors.category_id = "Pick a category.";
   }
-  if (!values.manufacturer_id) {
-    errors.manufacturer_id = "Pick a manufacturer.";
-  }
 
   if (!values.form) {
     errors.form = "Pick a medicine form.";
@@ -304,7 +299,7 @@ function buildBatchPayload(values) {
     purchase_price: values.purchase_price !== "" && values.purchase_price != null ? Number(values.purchase_price) : null,
     mrp: values.mrp !== "" && values.mrp != null ? Number(values.mrp) : null,
     discount_percent: values.discount_percent !== "" && values.discount_percent != null ? Number(values.discount_percent) : 0,
-    supplier_id: values.supplier_id ? Number(values.supplier_id) : null,
+    supplier_id: values.supplier_id && Number(values.supplier_id) > 0 ? Number(values.supplier_id) : null,
     rack_location: values.rack_location || null,
   };
 }
@@ -415,26 +410,33 @@ export function readSalts() {
     }
 
     const salt = findSaltByName(name);
-    if (!salt) {
+    if (!salt || !salt.id || String(salt.id).startsWith("temp_") || isNaN(Number(salt.id))) {
       if (!errorMessage) {
-        errorMessage = `"${name}" is not in the salt list. Pick one from the list, or add it with the + button.`;
+        errorMessage = `"${name}" is not registered in the database. Please pick an existing salt or click + to add it.`;
       }
       if (nameInput) nameInput.classList.add("invalid");
       return;
     }
 
-    if (strength.length > 20) {
-      if (!errorMessage) errorMessage = "Salt strength can be at most 20 characters.";
+    const saltId = Number(salt.id);
+    if (!Number.isInteger(saltId) || saltId <= 0) {
+      if (!errorMessage) errorMessage = `Invalid salt ID for "${name}".`;
+      if (nameInput) nameInput.classList.add("invalid");
+      return;
+    }
+
+    if (strength.length > 100) {
+      if (!errorMessage) errorMessage = "Salt strength can be at most 100 characters.";
       if (strengthInput) strengthInput.classList.add("invalid");
     }
 
-    if (seenSaltIds.has(salt.id)) {
+    if (seenSaltIds.has(saltId)) {
       if (!errorMessage) errorMessage = "The same salt is added more than once.";
       if (nameInput) nameInput.classList.add("invalid");
     }
 
-    seenSaltIds.add(salt.id);
-    salts.push({ salt_id: salt.id, strength });
+    seenSaltIds.add(saltId);
+    salts.push({ salt_id: saltId, strength });
   });
 
   if (salts.length === 0 && !errorMessage) {
@@ -448,28 +450,25 @@ export async function loadLookups(force = false) {
   if (
     !force &&
     lookups.categories.length > 0 &&
-    lookups.manufacturers.length > 0 &&
     lookups.salts.length > 0
   ) {
     return;
   }
-  const [cats, mans, brands, suppliers, salts, strengths] = await Promise.allSettled([
+  const [cats, brands, suppliers, salts, strengths] = await Promise.allSettled([
     request("GET", DASHBOARD_PATHS.categories, { allowArray: true }),
-    request("GET", DASHBOARD_PATHS.manufacturers, { allowArray: true }),
     request("GET", DASHBOARD_PATHS.brands, { allowArray: true }),
     request("GET", DASHBOARD_PATHS.suppliers, { allowArray: true }),
     request("GET", DASHBOARD_PATHS.salts, { allowArray: true }),
     request("GET", DASHBOARD_PATHS.saltStrengths),
   ]);
 
-  for (const result of [cats, mans, brands, suppliers, salts]) {
+  for (const result of [cats, brands, suppliers, salts]) {
     if (result.status === "rejected") {
       throw result.reason;
     }
   }
 
   lookups.categories = normalizeLookupList(cats);
-  lookups.manufacturers = normalizeLookupList(mans);
   lookups.brands = normalizeLookupList(brands);
   lookups.suppliers = normalizeLookupList(suppliers);
   lookups.salts = normalizeLookupList(salts);
@@ -876,14 +875,13 @@ export async function openProductDialog(mode, product = null) {
 
   function fillProductForm() {
     populateSelectDropdown(form.elements["category_id"], lookups.categories, LOOKUP_LABELS.categories);
-    populateSelectDropdown(form.elements["manufacturer_id"], lookups.manufacturers, LOOKUP_LABELS.manufacturers);
     populateSelectDropdown(form.elements["brand_id"], lookups.brands, LOOKUP_LABELS.brands, NO_CHOICE_LABELS.brands);
     populateSelectDropdown(form.elements["supplier_id"], lookups.suppliers, LOOKUP_LABELS.suppliers, NO_CHOICE_LABELS.suppliers);
     refreshSaltDatalist();
 
     if (mode === "edit" && product) {
       const fields = [
-        "name", "category_id", "manufacturer_id", "brand_id", "form", "hsn_code",
+        "name", "category_id", "brand_id", "form", "hsn_code",
         "pack_size", "storage_condition", "schedule", "gst_percent", "description",
         "side_effects", "dosage_information", "image_url",
       ];
@@ -897,10 +895,6 @@ export async function openProductDialog(mode, product = null) {
       if (form.elements["category_id"] && !form.elements["category_id"].value && product.category) {
         const match = lookups.categories.find(c => c.name.toLowerCase() === String(product.category).toLowerCase());
         if (match) form.elements["category_id"].value = String(match.id);
-      }
-      if (form.elements["manufacturer_id"] && !form.elements["manufacturer_id"].value && product.manufacturer) {
-        const match = lookups.manufacturers.find(m => m.name.toLowerCase() === String(product.manufacturer).toLowerCase());
-        if (match) form.elements["manufacturer_id"].value = String(match.id);
       }
       if (form.elements["brand_id"] && !form.elements["brand_id"].value && product.brand) {
         const match = lookups.brands.find(b => b.name.toLowerCase() === String(product.brand).toLowerCase());
@@ -926,7 +920,7 @@ export async function openProductDialog(mode, product = null) {
   }
 
   // Pre-fill immediately if lookups are already loaded in frontend memory
-  if (lookups.categories.length > 0 && lookups.manufacturers.length > 0) {
+  if (lookups.categories.length > 0) {
     fillProductForm();
   } else {
     try {
@@ -934,7 +928,7 @@ export async function openProductDialog(mode, product = null) {
       fillProductForm();
     } catch (error) {
       if (!error.redirecting) {
-        setDialogMessage(message, `Could not load categories and manufacturers. ${error.message}`);
+        setDialogMessage(message, `Could not load form options. ${error.message}`);
       }
     }
   }
@@ -1069,13 +1063,23 @@ export function hideCatalogSuggestions() {
   }
 }
 
-export function applyCatalogSuggestion(item) {
+export async function applyCatalogSuggestion(item) {
   const form = document.getElementById("product-form");
   if (!form || !item) return;
 
   // Fill text and select fields
   if (form.elements["name"]) form.elements["name"].value = item.name || "";
-  if (item.form && form.elements["form"]) form.elements["form"].value = item.form;
+  if (item.form && form.elements["form"]) {
+    const cleanForm = String(item.form).trim().toLowerCase();
+    const matchOption = Array.from(form.elements["form"].options).find(
+      (opt) => opt.value.toLowerCase() === cleanForm || opt.value.toLowerCase() === cleanForm.replace(/s$/, "")
+    );
+    if (matchOption) {
+      form.elements["form"].value = matchOption.value;
+    } else {
+      form.elements["form"].value = item.form;
+    }
+  }
   if (item.pack_size && form.elements["pack_size"]) form.elements["pack_size"].value = item.pack_size;
   if (item.image_url && form.elements["image_url"]) form.elements["image_url"].value = item.image_url;
   if (form.elements["description"]) {
@@ -1091,25 +1095,74 @@ export function applyCatalogSuggestion(item) {
     form.elements["storage_condition"].value = item.storage_condition || "Store in a cool, dry place";
   }
 
-  // Match Manufacturer from lookups
-  if (item.manufacturer && form.elements["manufacturer_id"]) {
-    const match = lookups.manufacturers.find(
-      (m) => m.name.toLowerCase() === String(item.manufacturer).toLowerCase()
-    );
-    if (match) {
-      form.elements["manufacturer_id"].value = String(match.id);
-      setFieldError(form.elements["manufacturer_id"], "");
+  // Match Brand from lookups
+  if (form.elements["brand_id"]) {
+    if (item.brand) {
+      const cleanBrand = String(item.brand).trim();
+      let match = lookups.brands.find(
+        (b) => b.name.toLowerCase() === cleanBrand.toLowerCase()
+      );
+      if (!match && cleanBrand) {
+        try {
+          const res = await request("POST", DASHBOARD_PATHS.brands, { body: { name: cleanBrand } });
+          if (res && res.id) {
+            match = res;
+            lookups.brands.push(res);
+            lookups.brands.sort(sortByName);
+            form.elements["brand_id"].append(new Option(res.name, String(res.id)));
+          }
+        } catch {
+          match = lookups.brands.find(
+            (b) => b.name.toLowerCase() === cleanBrand.toLowerCase()
+          );
+        }
+      }
+      if (match) {
+        form.elements["brand_id"].value = String(match.id);
+      } else {
+        form.elements["brand_id"].value = "";
+      }
+    } else {
+      form.elements["brand_id"].value = "";
     }
+    setFieldError(form.elements["brand_id"], "");
   }
 
   // Pre-fill Salts
   const saltListEl = document.getElementById("salt-list");
   if (saltListEl) {
     saltListEl.replaceChildren();
-    if (Array.isArray(item.salts) && item.salts.length > 0) {
-      item.salts.forEach((s) => {
-        addSaltRow({ name: s.name || "", strength: s.strength || "" });
-      });
+    const rawSalts = Array.isArray(item.salts) ? item.salts : (item.salts ? [item.salts] : []);
+    if (rawSalts.length > 0) {
+      for (const s of rawSalts) {
+        let saltName = "";
+        let saltStrength = "";
+        if (typeof s === "string") {
+          const m = s.match(/^([^(]+)(?:\((.*)\))?$/);
+          saltName = m ? m[1].trim() : s.trim();
+          saltStrength = m && m[2] ? m[2].trim() : "";
+        } else if (s && typeof s === "object") {
+          saltName = (s.name || s.salt || s.salt_name || "").toString().trim();
+          saltStrength = (s.strength || "").toString().trim();
+        }
+        if (saltName) {
+          let salt = findSaltByName(saltName);
+          if (!salt) {
+            try {
+              const res = await request("POST", DASHBOARD_PATHS.salts, { body: { name: saltName } });
+              if (res && res.id) {
+                salt = res;
+                lookups.salts.push(res);
+                lookups.salts.sort(sortByName);
+                refreshSaltDatalist();
+              }
+            } catch {
+              salt = findSaltByName(saltName);
+            }
+          }
+          addSaltRow({ name: saltName, strength: saltStrength });
+        }
+      }
     } else {
       addSaltRow();
     }
@@ -1135,16 +1188,76 @@ function renderCatalogSuggestions(items, suggestionsEl) {
     row.setAttribute("role", "button");
     row.setAttribute("tabindex", "0");
 
-    const nameEl = document.createElement("div");
+    // Line 1: Name and Form badge
+    const nameRow = document.createElement("div");
+    nameRow.className = "catalog-suggestion-name-row";
+
+    const nameEl = document.createElement("span");
     nameEl.className = "catalog-suggestion-name";
     nameEl.textContent = item.name;
+    nameRow.append(nameEl);
 
-    const subEl = document.createElement("div");
-    subEl.className = "catalog-suggestion-sub";
-    const subParts = [item.form, item.manufacturer].filter(Boolean);
-    subEl.textContent = subParts.join(" · ");
+    if (item.form) {
+      const badge = document.createElement("span");
+      badge.className = "catalog-suggestion-badge";
+      badge.textContent = item.form;
+      nameRow.append(badge);
+    }
+    row.append(nameRow);
 
-    row.append(nameEl, subEl);
+    // Line 2: Salts / Composition
+    let saltsText = "";
+    if (Array.isArray(item.salts) && item.salts.length > 0) {
+      saltsText = item.salts
+        .map((s) => {
+          if (typeof s === "string") return s;
+          const n = s.name || s.salt || s.salt_name || "";
+          const str = s.strength ? ` ${s.strength}` : "";
+          return `${n}${str}`.trim();
+        })
+        .filter(Boolean)
+        .join(" + ");
+    } else if (typeof item.salts === "string") {
+      saltsText = item.salts;
+    }
+
+    if (saltsText) {
+      const saltsEl = document.createElement("div");
+      saltsEl.className = "catalog-suggestion-salts";
+
+      const icon = document.createElement("i");
+      icon.className = "fa-solid fa-flask";
+      icon.setAttribute("aria-hidden", "true");
+
+      const textSpan = document.createElement("span");
+      textSpan.textContent = saltsText;
+
+      saltsEl.append(icon, textSpan);
+      row.append(saltsEl);
+    }
+
+    // Line 3: Brand & Pack size
+    const metaEl = document.createElement("div");
+    metaEl.className = "catalog-suggestion-meta";
+
+    if (item.brand) {
+      const brandSpan = document.createElement("span");
+      const brandIcon = document.createElement("i");
+      brandIcon.className = "fa-solid fa-tag";
+      brandIcon.setAttribute("aria-hidden", "true");
+      brandSpan.append(brandIcon, document.createTextNode(` Brand: ${item.brand}`));
+      metaEl.append(brandSpan);
+    }
+
+    if (item.pack_size) {
+      const packSpan = document.createElement("span");
+      packSpan.textContent = `· ${item.pack_size}`;
+      metaEl.append(packSpan);
+    }
+
+    if (metaEl.childNodes.length > 0) {
+      row.append(metaEl);
+    }
 
     row.addEventListener("mousedown", (e) => {
       e.preventDefault(); // Prevent input blur before click finishes
@@ -1412,7 +1525,6 @@ export function initProducts() {
       const productValues = {
         name: (formData.get("name") || "").toString().trim(),
         category_id: (formData.get("category_id") || "").toString(),
-        manufacturer_id: (formData.get("manufacturer_id") || "").toString(),
         brand_id: (formData.get("brand_id") || "").toString(),
         form: (formData.get("form") || "").toString().trim(),
         pack_size: (formData.get("pack_size") || "").toString().trim(),
@@ -1457,8 +1569,7 @@ export function initProducts() {
       const payload = {
         name: productValues.name,
         category_id: Number(productValues.category_id),
-        manufacturer_id: Number(productValues.manufacturer_id),
-        brand_id: productValues.brand_id ? Number(productValues.brand_id) : null,
+        brand_id: productValues.brand_id && Number(productValues.brand_id) > 0 ? Number(productValues.brand_id) : null,
         form: productValues.form,
         pack_size: productValues.pack_size,
         schedule: productValues.schedule,
@@ -1600,7 +1711,7 @@ export function initProducts() {
     });
   }
 
-  // Catalog Form Submit (Categories, Manufacturers, Brands, Suppliers, Salts)
+  // Catalog Form Submit (Categories, Brands, Suppliers, Salts)
   const catalogFormEl = document.getElementById("catalog-form");
   if (catalogFormEl) {
     catalogFormEl.addEventListener("submit", async function handleCatalogSubmit(event) {

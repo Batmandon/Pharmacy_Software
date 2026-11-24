@@ -22,7 +22,6 @@ export const DASHBOARD_PATHS = {
   productsWrite: "/admin/products",
   batches: "/admin/batches",
   categories: "/admin/categories",
-  manufacturers: "/admin/manufacturers",
   brands: "/admin/brands",
   suppliers: "/admin/suppliers",
   salts: "/admin/salts",

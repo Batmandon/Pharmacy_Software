@@ -399,23 +399,16 @@
       <fieldset data-group="product">
         <legend>Product</legend>
 
+        <div class="field autocomplete-field"><label for="p-name">Name</label>
+          <input type="text" id="p-name" name="name" class="input" maxlength="100" autofocus autocomplete="off"><small class="error"></small>
+          <div id="p-name-suggestions" class="catalog-suggestions" hidden></div>
+        </div>
+
         <div class="grid-2">
-          <div class="field autocomplete-field"><label for="p-name">Name</label>
-            <input type="text" id="p-name" name="name" class="input" maxlength="100" autofocus autocomplete="off"><small class="error"></small>
-            <div id="p-name-suggestions" class="catalog-suggestions" hidden></div>
-          </div>
           <div class="field"><label for="p-category">Category</label>
             <div class="select-add">
               <select id="p-category" name="category_id" class="input"></select>
               <button type="button" class="icon-btn" data-new="categories" aria-label="Add a new category" title="Add a new category"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
-            </div><small class="error"></small></div>
-        </div>
-
-        <div class="grid-2">
-          <div class="field"><label for="p-manufacturer">Manufacturer</label>
-            <div class="select-add">
-              <select id="p-manufacturer" name="manufacturer_id" class="input"></select>
-              <button type="button" class="icon-btn" data-new="manufacturers" aria-label="Add a new manufacturer" title="Add a new manufacturer"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
             </div><small class="error"></small></div>
           <div class="field"><label for="p-brand">Brand <span class="opt">(optional)</span></label>
             <div class="select-add">
@@ -517,7 +510,7 @@
     </form>
   </dialog>
 
-  <!-- ===== New category / manufacturer / salt ===== -->
+  <!-- ===== New category / brand / supplier / salt ===== -->
   <dialog id="catalog-dialog" class="dialog dialog-small" aria-labelledby="catalog-title">
     <form id="catalog-form" class="dialog-body" novalidate>
       <h3 id="catalog-title">New item</h3>
