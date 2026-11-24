@@ -4,6 +4,10 @@ A pharmacy management website for maintaining medicine inventory and accepting
 customer orders. It includes a customer storefront and an administrative
 dashboard backed by a FastAPI API and PostgreSQL database.
 
+## New Feature
+
+- Added Suggestions while admin adding medicine and its details.
+
 ## Features
 
 - Browse and search the medicine catalog, including product details and prices.
@@ -151,6 +155,6 @@ Open `http://localhost:5500`. The local API URL is configured in
 
 ## Features in the Future will be added 
 
-- While adding medicines our software will show you suggestions for matching medicines. This will avoid burden for you typing manually whole thing.
+- While adding medicines our software will show you suggestions for matching medicines. This will avoid burden for you typing manually whole thing. -> ADDED
 - Planning to add a Qr code scanner this is for same reason of avoiding burden from you to add medicines manually.
   
